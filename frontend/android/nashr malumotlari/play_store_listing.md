@@ -7,7 +7,7 @@
 | Maydon | Qiymat |
 |--------|--------|
 | **Ilova nomi** | Muallimus Soniy — Ikkinchi Muallim |
-| **Dasturchi nomi** | CodingTech |
+| **Dasturchi nomi** | MYSTAR MChJ (CodingTech.uz) |
 | **Package ID** | uz.codingtech.muallimus_soniy |
 | **Versiya** | 1.0.0 (Build 1) |
 | **Kategoriya** | Education (Ta'lim) |
@@ -93,7 +93,7 @@ arab yozuvi, quron, arabic learning uzbek, muallim, darslik, kitob
 
 | Maydon | Qiymat |
 |--------|--------|
-| **Email** | codingtech.uz@gmail.com |
+| **Email** | shohruxbekaralov@gmail.com |
 | **Veb-sayt** | https://muslim.uz |
 
 ---
