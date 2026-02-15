@@ -7,6 +7,7 @@ import '../../presentation/screens/reader/reader_screen.dart';
 import '../../presentation/screens/toc_screen.dart';
 import '../../presentation/screens/feedback_screen.dart';
 import '../../presentation/screens/settings_screen.dart';
+import '../../presentation/screens/legal_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -38,6 +39,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/legal/privacy',
+        builder: (context, state) => const LegalScreen(
+          title: '🔒 Maxfiylik siyosati',
+          type: 'privacy',
+        ),
+      ),
+      GoRoute(
+        path: '/legal/terms',
+        builder: (context, state) => const LegalScreen(
+          title: '📋 Foydalanish shartlari',
+          type: 'terms',
+        ),
+      ),
+      GoRoute(
+        path: '/legal/about',
+        builder: (context, state) => const LegalScreen(
+          title: '📖 Dastur haqida',
+          type: 'about',
+        ),
       ),
     ],
   );

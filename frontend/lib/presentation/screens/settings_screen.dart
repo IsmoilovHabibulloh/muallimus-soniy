@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
 import '../../domain/providers/theme_provider.dart';
 import '../../domain/providers/locale_provider.dart';
@@ -87,7 +88,7 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: 24),
 
-          // About
+          // About & Legal
           Text("Ilova haqida", style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           _SettingCard(
@@ -95,17 +96,38 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: const Text('📖', style: TextStyle(fontSize: 24)),
                 title: const Text('Muallimi Soniy'),
-                subtitle: const Text('v1.0.0'),
+                subtitle: const Text('v1.0.0 • MYSTAR MChJ'),
                 dense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                onTap: () => context.push('/legal/about'),
+                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.code_rounded, size: 20),
-                title: const Text('CodingTech.uz'),
-                subtitle: const Text('Dasturchilar'),
+                leading: const Icon(Icons.shield_rounded, size: 20, color: AppColors.primary),
+                title: const Text('Maxfiylik siyosati'),
                 dense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                onTap: () => context.push('/legal/privacy'),
+                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.description_rounded, size: 20, color: AppColors.primary),
+                title: const Text('Foydalanish shartlari'),
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                onTap: () => context.push('/legal/terms'),
+                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.info_outline_rounded, size: 20, color: AppColors.primary),
+                title: const Text('Dastur haqida'),
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                onTap: () => context.push('/legal/about'),
+                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
               ),
             ],
           ),
