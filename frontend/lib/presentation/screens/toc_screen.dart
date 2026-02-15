@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
+import '../../core/l10n/app_localizations.dart';
 import '../../domain/providers/book_provider.dart';
 
 class TocScreen extends ConsumerWidget {
@@ -11,10 +12,11 @@ class TocScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final chaptersAsync = ref.watch(chaptersProvider);
+    final l = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('📋 Mundarija'),
+        title: Text('📋 ${l.tableOfContents}'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.of(context).pop(),
@@ -30,11 +32,11 @@ class TocScreen extends ConsumerWidget {
             children: [
               const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
               const SizedBox(height: 12),
-              Text('Xatolik: $err'),
+              Text('${l.error}: $err'),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => ref.invalidate(chaptersProvider),
-                child: const Text('Qayta urinish'),
+                child: Text(l.retry),
               ),
             ],
           ),
@@ -47,7 +49,7 @@ class TocScreen extends ConsumerWidget {
                 children: [
                   Icon(Icons.list_rounded, size: 64, color: AppColors.textMuted),
                   const SizedBox(height: 12),
-                  Text("Mundarija hali qo'shilmagan",
+                  Text(l.noToc,
                       style: Theme.of(context).textTheme.bodyLarge),
                 ],
               ),

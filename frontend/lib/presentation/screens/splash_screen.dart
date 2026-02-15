@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/colors.dart';
 import '../../core/constants.dart';
+import '../../core/l10n/app_localizations.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -39,6 +40,7 @@ class _SplashScreenState extends State<SplashScreen> {
       barrierDismissible: false,
       barrierColor: Colors.black54,
       pageBuilder: (ctx, anim1, anim2) {
+        final l = AppLocalizations.of(ctx);
         return Center(
           child: Material(
             color: Colors.transparent,
@@ -59,14 +61,13 @@ class _SplashScreenState extends State<SplashScreen> {
                   const Text('📖', style: TextStyle(fontSize: 48)),
                   const SizedBox(height: 16),
                   Text(
-                    'Xush kelibsiz!',
+                    l?.welcome ?? 'Xush kelibsiz!',
                     style: Theme.of(ctx).textTheme.headlineMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Bu ilova "Ahmad Xodiy Maqsudiy — Muallimi Soniy" kitobini '
-                    'o\'qish va talaffuzni eshitish uchun mo\'ljallangan.',
+                    l?.welcomeDescription ?? '',
                     style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
                       color: AppColors.textMuted,
                     ),
@@ -88,8 +89,7 @@ class _SplashScreenState extends State<SplashScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Bu kitob Qur\'on harflarini o\'rgatadi. '
-                            'Iltimos, tahoratli holda foydalaning.',
+                            l?.wuduReminder ?? '',
                             style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                               color: AppColors.primaryDark,
                               fontWeight: FontWeight.w500,
@@ -101,8 +101,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Ilova offline ishlaydi. Internet faqat yangi kontent '
-                    'yuklash uchun kerak.',
+                    l?.offlineNote ?? '',
                     style: Theme.of(ctx).textTheme.bodySmall,
                     textAlign: TextAlign.center,
                   ),
@@ -118,7 +117,7 @@ class _SplashScreenState extends State<SplashScreen> {
                           context.go('/home');
                         }
                       },
-                      child: const Text('Davom etish'),
+                      child: Text(l?.continueButton ?? 'Davom etish'),
                     ),
                   ),
                 ],

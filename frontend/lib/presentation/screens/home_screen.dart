@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/colors.dart';
 import '../../core/constants.dart';
+import '../../core/l10n/app_localizations.dart';
 import '../../domain/providers/book_provider.dart';
 import '../../domain/providers/theme_provider.dart';
 import '../widgets/copyright_footer.dart';
@@ -16,6 +18,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final bookAsync = ref.watch(bookProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: SafeArea(
@@ -66,7 +69,7 @@ class HomeScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Muallif: Ahmad Xodiy Maqsudiy',
+                        l.author,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: AppColors.textMuted,
                         ),
@@ -83,7 +86,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Ikkinchi Muallim',
+                        l.secondTeacher,
                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -92,7 +95,7 @@ class HomeScreen extends ConsumerWidget {
                       bookAsync.when(
                         data: (book) => book != null
                             ? Text(
-                                '${book.totalPages} sahifa',
+                                l.pages(book.totalPages),
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: AppColors.textMuted,
                                 ),
@@ -108,7 +111,7 @@ class HomeScreen extends ConsumerWidget {
                               size: 16, color: AppColors.textMuted.withOpacity(0.6)),
                           const SizedBox(width: 6),
                           Text(
-                            "O'qidi: Jahongir qori Nematov",
+                            l.recitedBy,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: AppColors.textMuted.withOpacity(0.6),
                             ),
@@ -123,7 +126,7 @@ class HomeScreen extends ConsumerWidget {
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-            // Action Cards — only "O'qishni boshlash" and "Fikr bildirish"
+            // Action Cards
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverGrid.count(
@@ -134,7 +137,7 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   _ActionCard(
                     icon: Icons.auto_stories_rounded,
-                    label: "O'qishni boshlash",
+                    label: l.startReading,
                     color: AppColors.primary,
                     onTap: () async {
                       final prefs = await SharedPreferences.getInstance();
@@ -146,7 +149,7 @@ class HomeScreen extends ConsumerWidget {
                   ).animate().fadeIn(delay: 100.ms, duration: 300.ms).slideX(begin: -0.1),
                   _ActionCard(
                     icon: Icons.feedback_rounded,
-                    label: 'Fikr bildirish',
+                    label: l.feedback,
                     color: AppColors.accent,
                     onTap: () => context.push('/feedback'),
                   ).animate().fadeIn(delay: 200.ms, duration: 300.ms).slideX(begin: 0.1),
@@ -161,7 +164,7 @@ class HomeScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  "So'nggi o'qilgan sahifa",
+                  l.lastReadPage,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
@@ -177,6 +180,77 @@ class HomeScreen extends ConsumerWidget {
             // Copyright footer
             const SliverToBoxAdapter(
               child: CopyrightFooter(),
+            ),
+
+            // Open Source GitHub link
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                child: GestureDetector(
+                  onTap: () => launchUrl(
+                    Uri.parse('https://github.com/IsmoilovHabibulloh/muallimus-soniy'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withOpacity(0.08),
+                          AppColors.secondary.withOpacity(0.05),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.12),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.code_rounded,
+                          size: 18,
+                          color: AppColors.textMuted.withOpacity(0.6),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Open Source',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textMuted.withOpacity(0.6),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '·',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textMuted.withOpacity(0.3),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'GitHub',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textMuted.withOpacity(0.5),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.open_in_new_rounded,
+                          size: 14,
+                          color: AppColors.textMuted.withOpacity(0.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -267,6 +341,7 @@ class _RecentPageCardState extends State<_RecentPageCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: () => context.push('/reader/$_lastPage'),
       child: Container(
@@ -297,12 +372,12 @@ class _RecentPageCardState extends State<_RecentPageCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Sahifa $_lastPage',
+                    l.pageN(_lastPage),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "Davom ettirish",
+                    l.continueReading,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.primary,
                     ),

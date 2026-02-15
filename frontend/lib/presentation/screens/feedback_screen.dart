@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../core/theme/colors.dart';
 import '../../core/constants.dart';
+import '../../core/l10n/app_localizations.dart';
 import '../../domain/providers/book_provider.dart';
 import '../widgets/copyright_footer.dart';
 
@@ -51,9 +52,10 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
     } catch (e) {
       setState(() => _submitting = false);
       if (mounted) {
+        final l = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Xatolik yuz berdi. Qayta urinib ko\'ring.'),
+            content: Text(l?.errorOccurred ?? 'Xatolik yuz berdi.'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -63,9 +65,10 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('💬 Fikr bildirish'),
+        title: Text('💬 ${l.feedbackTitle}'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.of(context).pop(),
@@ -84,6 +87,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
   }
 
   Widget _buildSuccess() {
+    final l = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.only(top: 60),
@@ -100,14 +104,14 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Rahmat!',
+              l.thanks,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              "Fikringiz muvaffaqiyatli yuborildi.",
+              l.feedbackSent,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: AppColors.textMuted,
               ),
@@ -115,7 +119,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Asosiy sahifaga"),
+              child: Text(l.backToHome),
             ),
           ],
         ),
@@ -124,18 +128,19 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
   }
 
   Widget _buildForm() {
+    final l = AppLocalizations.of(context)!;
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Fikr va takliflarni qabul qilamiz',
+            l.feedbackSubtitle,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 4),
           Text(
-            "Barcha maydonlarni to'ldiring",
+            l.fillAllFields,
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 24),
@@ -143,28 +148,28 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
           // Name
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Ismingiz',
-              prefixIcon: Icon(Icons.person_outline_rounded),
+            decoration: InputDecoration(
+              labelText: l.yourName,
+              prefixIcon: const Icon(Icons.person_outline_rounded),
             ),
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'Ism kiritilmagan' : null,
+            validator: (v) => (v == null || v.trim().isEmpty) ? l.nameRequired : null,
           ),
           const SizedBox(height: 16),
 
           // Phone
           TextFormField(
             controller: _phoneController,
-            decoration: const InputDecoration(
-              labelText: 'Telefon raqam',
-              prefixIcon: Icon(Icons.phone_outlined),
+            decoration: InputDecoration(
+              labelText: l.phoneNumber,
+              prefixIcon: const Icon(Icons.phone_outlined),
               hintText: '+998901234567',
             ),
             keyboardType: TextInputType.phone,
             validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'Telefon kiritilmagan';
+              if (v == null || v.trim().isEmpty) return l.phoneRequired;
               final clean = v.trim().replaceAll(RegExp(r'[\s\-\(\)]'), '');
               if (!RegExp(r'^\+?998\d{9}$').hasMatch(clean)) {
-                return "Noto'g'ri format: +998XXXXXXXXX";
+                return l.phoneInvalid;
               }
               return null;
             },
@@ -172,13 +177,13 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
           const SizedBox(height: 16),
 
           // Type
-          Text('Turi', style: Theme.of(context).textTheme.bodySmall),
+          Text(l.type, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: _TypeChip(
-                  label: '📝 Taklif',
+                  label: l.suggestion,
                   selected: _feedbackType == 'taklif',
                   onTap: () => setState(() => _feedbackType = 'taklif'),
                 ),
@@ -186,7 +191,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _TypeChip(
-                  label: '🐛 Xatolik',
+                  label: l.bugReport,
                   selected: _feedbackType == 'xatolik',
                   onTap: () => setState(() => _feedbackType = 'xatolik'),
                 ),
@@ -198,17 +203,17 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
           // Details
           TextFormField(
             controller: _detailsController,
-            decoration: const InputDecoration(
-              labelText: 'Tafsilotlar',
+            decoration: InputDecoration(
+              labelText: l.details,
               alignLabelWithHint: true,
-              prefixIcon: Padding(
+              prefixIcon: const Padding(
                 padding: EdgeInsets.only(bottom: 60),
                 child: Icon(Icons.edit_note_rounded),
               ),
             ),
             maxLines: 4,
             validator: (v) => (v == null || v.trim().length < 10)
-                ? 'Kamida 10 belgi kiriting'
+                ? l.minChars
                 : null,
           ),
           const SizedBox(height: 24),
@@ -224,7 +229,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Text('Yuborish'),
+                  : Text(l.submit),
             ),
           ),
         ],

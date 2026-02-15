@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/colors.dart';
 import '../../../domain/models/book.dart';
+import '../../../core/l10n/app_localizations.dart';
 
 /// Universal native interactive page renderer with premium Arabic font + animations.
 ///
@@ -1174,7 +1175,7 @@ class _MuqaddimaPageState extends State<_MuqaddimaPage>
                                 : Colors.transparent,
                           ),
                           child: Text(
-                            headerUnit.textContent.toUpperCase(),
+                            (AppLocalizations.of(context)?.foreword ?? headerUnit.textContent).toUpperCase(),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontFamily: 'Amiri',
@@ -1215,7 +1216,7 @@ class _MuqaddimaPageState extends State<_MuqaddimaPage>
                       ),
                       color: const Color(0xFFFFFDF5).withOpacity(0.6),
                     ),
-                    child: _buildFlowingText(bodyUnits, bodySize),
+                    child: _buildBodyContent(bodyUnits, bodySize, context),
                   ),
                 ),
 
@@ -1276,6 +1277,42 @@ class _MuqaddimaPageState extends State<_MuqaddimaPage>
           ),
         );
       }).toList(),
+    );
+  }
+
+  /// Dispatches between interactive word-units (Uz Latin) and translated text
+  Widget _buildBodyContent(List<TextUnit> units, double fontSize, BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final isUzLatin = locale.languageCode == 'uz' && locale.countryCode != 'Cyrl';
+
+    if (isUzLatin) {
+      return _buildFlowingText(units, fontSize);
+    }
+
+    final l = AppLocalizations.of(context);
+    final translatedBody = l?.forewordBody ?? '';
+    if (translatedBody.isEmpty) {
+      return _buildFlowingText(units, fontSize);
+    }
+
+    return _buildTranslatedBody(translatedBody, fontSize, locale);
+  }
+
+  /// Renders full translated foreword as a single styled text block
+  Widget _buildTranslatedBody(String text, double fontSize, Locale locale) {
+    final isArabic = locale.languageCode == 'ar';
+
+    return SelectableText(
+      text,
+      textAlign: isArabic ? TextAlign.right : TextAlign.justify,
+      textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
+      style: TextStyle(
+        fontFamily: 'Amiri',
+        fontSize: fontSize,
+        height: 1.9,
+        color: const Color(0xFF3E2723).withOpacity(0.85),
+        fontWeight: FontWeight.w400,
+      ),
     );
   }
 
@@ -1577,7 +1614,7 @@ class _CoverPageState extends State<_CoverPage>
 
                 // Author label + Arabic name
                 Text(
-                  'Muallif:',
+                  AppLocalizations.of(context)?.authorLabel ?? 'Muallif:',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
@@ -1630,7 +1667,7 @@ class _CoverPageState extends State<_CoverPage>
                         size: 18, color: const Color(0xFF5D4037).withOpacity(0.45)),
                     const SizedBox(width: 6),
                     Text(
-                      "O'qidi: Jahongir qori Nematov",
+                      '${AppLocalizations.of(context)?.recitedByLabel ?? "O\'qidi:"} Jahongir qori Nematov',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,

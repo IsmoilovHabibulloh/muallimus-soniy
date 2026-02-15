@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/colors.dart';
+import '../../core/l10n/app_localizations.dart';
 
 class CopyrightFooter extends StatelessWidget {
   const CopyrightFooter({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // VAQTINCHALIK OLIB TASHLANDI — Android nashr uchun
+    // Asl kodni qaytarish kerak:
+    // final isDark = Theme.of(context).brightness == Brightness.dark;
+    // final l = AppLocalizations.of(context)!;
+    return const SizedBox.shrink();
+    /*
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l = AppLocalizations.of(context)!;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
@@ -41,7 +49,7 @@ class CopyrightFooter extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            "O'zbekiston Musulmonlar Idorasi",
+            l.muslimBoardUz,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
@@ -53,7 +61,7 @@ class CopyrightFooter extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '© 2014 — Barcha huquqlar himoyalangan',
+            l.allRightsReserved,
             style: TextStyle(
               fontSize: 11,
               color: isDark
@@ -65,5 +73,6 @@ class CopyrightFooter extends StatelessWidget {
         ],
       ),
     );
+    */
   }
 }

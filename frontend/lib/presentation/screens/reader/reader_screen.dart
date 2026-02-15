@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/constants.dart';
+import '../../../core/l10n/app_localizations.dart';
 import '../../../domain/providers/book_provider.dart';
 import '../../../domain/models/book.dart';
 import 'native_page_renderer.dart';
@@ -361,7 +362,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                     ),
                     Expanded(
                       child: Text(
-                        'Sahifa $_currentPage / $totalPages',
+                        AppLocalizations.of(context)?.pageOf(_currentPage, totalPages) ?? 'Sahifa $_currentPage / $totalPages',
                         style: Theme.of(context).textTheme.titleMedium,
                         textAlign: TextAlign.center,
                       ),
@@ -537,26 +538,26 @@ class _AudioBar extends StatelessWidget {
 
               const SizedBox(width: 12),
 
-              // ── Audio control buttons ──
-              _ControlButton(
-                icon: isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                isPrimary: true,
-                isActive: isActive,
-                onTap: isPlaying ? onPause : onPlay,
-                size: 44,
-              ),
-              const SizedBox(width: 8),
-              AnimatedOpacity(
-                opacity: isActive ? 1.0 : 0.4,
-                duration: const Duration(milliseconds: 200),
-                child: _ControlButton(
-                  icon: Icons.stop_rounded,
-                  isPrimary: false,
-                  isActive: isActive,
-                  onTap: isActive ? onStop : null,
-                  size: 36,
-                ),
-              ),
+              // ── Audio control buttons (VAQTINCHALIK OLIB TASHLANDI — Android nashr uchun) ──
+              // _ControlButton(
+              //   icon: isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              //   isPrimary: true,
+              //   isActive: isActive,
+              //   onTap: isPlaying ? onPause : onPlay,
+              //   size: 44,
+              // ),
+              // const SizedBox(width: 8),
+              // AnimatedOpacity(
+              //   opacity: isActive ? 1.0 : 0.4,
+              //   duration: const Duration(milliseconds: 200),
+              //   child: _ControlButton(
+              //     icon: Icons.stop_rounded,
+              //     isPrimary: false,
+              //     isActive: isActive,
+              //     onTap: isActive ? onStop : null,
+              //     size: 36,
+              //   ),
+              // ),
             ],
           ),
         ],
@@ -689,12 +690,12 @@ class _PageView extends ConsumerWidget {
         child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (err, _) => Center(
-        child: Text('Xatolik: $err',
+        child: Text('${AppLocalizations.of(context)?.error ?? 'Xatolik'}: $err',
             style: const TextStyle(color: AppColors.error)),
       ),
       data: (page) {
         if (page == null) {
-          return const Center(child: Text('Sahifa topilmadi'));
+          return Center(child: Text(AppLocalizations.of(context)?.pageNotFound ?? 'Sahifa topilmadi'));
         }
 
         // Notify parent about units for audio playback
@@ -741,13 +742,13 @@ class _PageView extends ConsumerWidget {
                         children: [
                           const Icon(Icons.broken_image_rounded, size: 48),
                           const SizedBox(height: 8),
-                          Text('Rasm yuklanmadi',
+                          Text(AppLocalizations.of(context)?.imageLoadFailed ?? 'Rasm yuklanmadi',
                               style: Theme.of(context).textTheme.bodySmall),
                         ],
                       ),
                     ),
                   )
-                : const Center(child: Text('Sahifa topilmadi')),
+                : Center(child: Text(AppLocalizations.of(context)?.pageNotFound ?? 'Sahifa topilmadi')),
           ),
         );
       },

@@ -2,8 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/colors.dart';
+import '../../core/l10n/app_localizations.dart';
 import '../../domain/providers/theme_provider.dart';
 import '../../domain/providers/locale_provider.dart';
+
+const Map<String, String> _langFlags = {
+  'uz': '🇺🇿',
+  'uz_Cyrl': '🇺🇿',
+  'ru': '🇷🇺',
+  'en': '🇬🇧',
+  'ar': '🇸🇦',
+};
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -12,10 +21,11 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
+    final l = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('⚙️ Sozlamalar'),
+        title: Text('⚙️ ${l.settings}'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.of(context).pop(),
@@ -25,29 +35,41 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(20),
         children: [
           // Theme Section
-          Text('Mavzu', style: Theme.of(context).textTheme.titleMedium),
+          Text(l.theme, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           _SettingCard(
             children: [
-              _ThemeOption(
-                icon: Icons.light_mode_rounded,
-                label: 'Kunduzgi',
-                selected: themeMode == ThemeMode.light,
+              ListTile(
+                leading: const _PremiumIcon(emoji: '☀️'),
+                title: Text(l.light),
+                trailing: themeMode == ThemeMode.light
+                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    : null,
                 onTap: () => ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.light),
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
               ),
               const Divider(height: 1),
-              _ThemeOption(
-                icon: Icons.dark_mode_rounded,
-                label: 'Tungi',
-                selected: themeMode == ThemeMode.dark,
+              ListTile(
+                leading: const _PremiumIcon(emoji: '🌙'),
+                title: Text(l.dark),
+                trailing: themeMode == ThemeMode.dark
+                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    : null,
                 onTap: () => ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.dark),
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
               ),
               const Divider(height: 1),
-              _ThemeOption(
-                icon: Icons.brightness_auto_rounded,
-                label: 'Tizim',
-                selected: themeMode == ThemeMode.system,
+              ListTile(
+                leading: const _PremiumIcon(emoji: '🔄'),
+                title: Text(l.system),
+                trailing: themeMode == ThemeMode.system
+                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    : null,
                 onTap: () => ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.system),
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
               ),
             ],
           ),
@@ -55,7 +77,7 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // Language Section
-          Text('Til', style: Theme.of(context).textTheme.titleMedium),
+          Text(l.language, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           _SettingCard(
             children: LocaleNotifier.supportedLanguages.entries.map((entry) {
@@ -63,6 +85,7 @@ class SettingsScreen extends ConsumerWidget {
               return Column(
                 children: [
                   ListTile(
+                    leading: _PremiumIcon(emoji: _langFlags[entry.key] ?? '🏳️'),
                     title: Text(entry.value),
                     trailing: isSelected
                         ? const Icon(Icons.check_rounded, color: AppColors.primary)
@@ -89,12 +112,12 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // About & Legal
-          Text("Ilova haqida", style: Theme.of(context).textTheme.titleMedium),
+          Text(l.aboutApp, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           _SettingCard(
             children: [
               ListTile(
-                leading: const Text('📖', style: TextStyle(fontSize: 24)),
+                leading: const _PremiumIcon(emoji: '📖'),
                 title: const Text('Muallimi Soniy'),
                 subtitle: const Text('v1.0.0 • MYSTAR MChJ'),
                 dense: true,
@@ -104,8 +127,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.shield_rounded, size: 20, color: AppColors.primary),
-                title: const Text('Maxfiylik siyosati'),
+                leading: const _PremiumIcon(emoji: '🔒'),
+                title: Text(l.privacyPolicy),
                 dense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 onTap: () => context.push('/legal/privacy'),
@@ -113,8 +136,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.description_rounded, size: 20, color: AppColors.primary),
-                title: const Text('Foydalanish shartlari'),
+                leading: const _PremiumIcon(emoji: '📋'),
+                title: Text(l.termsOfUse),
                 dense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 onTap: () => context.push('/legal/terms'),
@@ -122,8 +145,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.info_outline_rounded, size: 20, color: AppColors.primary),
-                title: const Text('Dastur haqida'),
+                leading: const _PremiumIcon(emoji: 'ℹ️'),
+                title: Text(l.about),
                 dense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 onTap: () => context.push('/legal/about'),
@@ -171,30 +194,54 @@ class _SettingCard extends StatelessWidget {
   }
 }
 
-class _ThemeOption extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ThemeOption({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+class _PremiumIcon extends StatelessWidget {
+  final String emoji;
+  const _PremiumIcon({required this.emoji});
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: selected ? AppColors.primary : AppColors.textMuted),
-      title: Text(label),
-      trailing: selected
-          ? const Icon(Icons.check_rounded, color: AppColors.primary)
-          : null,
-      onTap: onTap,
-      dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [Colors.white.withOpacity(0.10), Colors.white.withOpacity(0.04)]
+              : [Colors.white, Colors.grey.shade50],
+        ),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.14)
+              : Colors.black.withOpacity(0.06),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? AppColors.primary.withOpacity(0.10)
+                : Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+          if (!isDark)
+            BoxShadow(
+              color: Colors.white.withOpacity(0.8),
+              blurRadius: 2,
+              offset: const Offset(0, -1),
+            ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          emoji,
+          style: const TextStyle(fontSize: 18),
+        ),
+      ),
     );
   }
 }
