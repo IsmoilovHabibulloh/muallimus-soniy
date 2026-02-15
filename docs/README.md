@@ -73,9 +73,9 @@ docker compose exec api alembic upgrade head
 ### Production URLs
 | Service | URL |
 |---------|-----|
-| Web | https://ikkinchimuallim.codingtech.uz |
-| API | https://api.ikkinchimuallim.codingtech.uz |
-| Admin | https://ikkinchimuallim.codingtech.uz/admin/ |
+| Web | https://your-domain.example.com |
+| API | https://api.your-domain.example.com |
+| Admin | https://your-domain.example.com/admin/ |
 
 ## Key Commands (Makefile)
 
