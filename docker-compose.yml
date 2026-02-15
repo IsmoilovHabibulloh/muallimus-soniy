@@ -94,6 +94,7 @@ services:
       - ./admin/dist:/usr/share/nginx/admin:ro
       - ./frontend/build/web:/usr/share/nginx/web:ro
       - media_data:/usr/share/nginx/media:ro
+      - ./frontend/android/nashr malumotlari:/usr/share/nginx/legal:ro
       - /var/www/certbot:/var/www/certbot:ro
     depends_on:
       - api
