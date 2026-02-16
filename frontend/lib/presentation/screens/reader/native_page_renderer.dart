@@ -147,32 +147,93 @@ class _NativePageRendererState extends State<NativePageRenderer> {
       contentChildren = [];
       for (int si = 0; si < page.sections.length; si++) {
         final groups = apiSectionMetaGroups[si] ?? [];
+        final sectionWidgets = <Widget>[];
+        for (final entry in groups) {
+          final sectionType = _getSectionType(entry.key, entry.value);
+          // Insert ULTRA divider before title sections (new lesson)
+          if (sectionType == 'title' && sectionWidgets.isNotEmpty) {
+            sectionWidgets.add(const _LessonDivider());
+          }
+          sectionWidgets.add(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildSection(sectionType, entry.key, entry.value),
+            ),
+          );
+        }
         contentChildren.add(
           Container(
             key: _sectionKeys[si],
-            child: Column(
-              children: groups.map((entry) {
-                final sectionType = _getSectionType(entry.key, entry.value);
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildSection(sectionType, entry.key, entry.value),
-                );
-              }).toList(),
-            ),
+            child: Column(children: sectionWidgets),
           ),
         );
       }
     } else {
-      // ── Fallback: pure metadata-based layout ──
-      contentChildren = metaOrder.asMap().entries.map((entry) {
-        final secKey = entry.value;
+      // ── Fallback: pure metadata-based layout with smart lesson detection ──
+      // When sections are empty, detect "harakat triplets" (3 consecutive
+      // short units like مَ مِ مُ) as new lesson boundaries and insert dividers.
+      
+      // First, flatten all units for triplet detection
+      final allUnits = <TextUnit>[];
+      for (final secKey in metaOrder) {
+        allUnits.addAll(metaGroups[secKey]!);
+      }
+      
+      // Find harakat triplet start indices
+      final tripletStarts = <int>{};
+      for (int i = 0; i + 2 < allUnits.length; i++) {
+        final u0 = allUnits[i].textContent.trim();
+        final u1 = allUnits[i + 1].textContent.trim();
+        final u2 = allUnits[i + 2].textContent.trim();
+        // A harakat triplet: 3 consecutive units, each is a single
+        // Arabic letter + harakat (runes length == 2, or char length <= 3)
+        if (u0.runes.length <= 2 && u1.runes.length <= 2 && u2.runes.length <= 2 &&
+            u0.isNotEmpty && u1.isNotEmpty && u2.isNotEmpty) {
+          tripletStarts.add(i);
+        }
+      }
+      
+      // Build unit-to-flatIndex mapping
+      final unitIdToFlatIndex = <int, int>{};
+      for (int i = 0; i < allUnits.length; i++) {
+        unitIdToFlatIndex[allUnits[i].id] = i;
+      }
+      
+      contentChildren = [];
+      for (int i = 0; i < metaOrder.length; i++) {
+        final secKey = metaOrder[i];
         final units = metaGroups[secKey]!;
         final sectionType = _getSectionType(secKey, units);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _buildSection(sectionType, secKey, units),
+        
+        // Check if this group's first unit is a triplet start
+        final firstUnitFlatIdx = unitIdToFlatIndex[units.first.id] ?? -1;
+        final isNewLesson = tripletStarts.contains(firstUnitFlatIdx);
+        
+        // Insert ULTRA divider before new lesson (harakat triplet or title or ya_header)
+        if ((isNewLesson || sectionType == 'title' || secKey.contains('ya_header')) && contentChildren.isNotEmpty) {
+          contentChildren.add(const _LessonDivider());
+        }
+        
+        // For triplet lesson starts, force large text rendering
+        final Widget sectionWidget;
+        if (isNewLesson && sectionType != 'title' && sectionType != 'bismillah') {
+          sectionWidget = _UnitRow(
+            units: units,
+            activeUnitId: widget.activeUnitId,
+            onUnitTap: widget.onUnitTap,
+            isLargeText: true,
+          );
+        } else {
+          sectionWidget = _buildSection(sectionType, secKey, units);
+        }
+        
+        contentChildren.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: sectionWidget,
+          ),
         );
-      }).toList();
+      }
     }
 
     return Container(
@@ -224,6 +285,33 @@ class _NativePageRendererState extends State<NativePageRenderer> {
     // Check first unit's section metadata
     if (units.isNotEmpty) {
       final firstSection = units.first.section;
+      // Madd intro note (special ultra UI)
+      if (firstSection == 'madd_intro') return 'madd_intro';
+      // Surah titles (e.g. surah_fatiha_title) — must check before generic 'title'
+      if (firstSection.startsWith('surah_') && firstSection.endsWith('_title')) return 'surah_title';
+      // Kalima/Iman titles
+      if ((firstSection.startsWith('kalima_') || firstSection.startsWith('iman_')) && firstSection.endsWith('_title')) return 'title';
+      // Notes
+      if (firstSection.contains('_note')) return 'note';
+      // Ayat sections (Quranic verses)
+      if (firstSection.endsWith('_ayat') || firstSection.endsWith('_ayat_cont')) return 'ayat';
+      // Dua/Kalima sections
+      if (firstSection.startsWith('kalima_') || firstSection.startsWith('iman_') || firstSection == 'mashiatullah' || firstSection == 'istiaza' || firstSection == 'iman_tarif') return 'dua';
+      // Explanations
+      if (firstSection.endsWith('_explanation') || firstSection.endsWith('_footnote')) return 'explanation';
+      // Harf grid (letter names with labels)
+      if (firstSection.startsWith('harf_r')) return 'harf_grid';
+      // Muqatta'at
+      if (firstSection.startsWith('muqattaat_r')) return 'muqattaat';
+      if (firstSection == 'muqattaat_note') return 'explanation';
+      // Existing types
+      if (firstSection.contains('maddi_title')) return 'title';
+      if (firstSection.contains('maddi_headers')) return 'maddi_table';
+      if (firstSection.contains('maddi_')) return 'maddi_table';
+      // Lesson 5-7 pages (19-21) — tikka fatha but NO table borders
+      if (firstSection.startsWith('lesson5_')) return 'madd_word_row';
+      if (firstSection.startsWith('lesson6_') && !firstSection.contains('ya_header')) return 'madd_word_row';
+      if (firstSection.startsWith('lesson7_')) return 'madd_word_row';
       if (firstSection.contains('bismillah')) return 'bismillah';
       if (firstSection.contains('title')) return 'title';
       if (firstSection.contains('alphabet')) return 'alphabet';
@@ -253,6 +341,55 @@ class _NativePageRendererState extends State<NativePageRenderer> {
           onTap: () => onUnitTap(units.first),
         );
 
+      case 'surah_title':
+        return _SurahTitle(
+          unit: units.first,
+          isActive: activeUnitId == units.first.id,
+          onTap: () => onUnitTap(units.first),
+        );
+
+      case 'madd_intro':
+        return _MaddIntroNote(
+          units: units,
+          activeUnitId: activeUnitId,
+          onUnitTap: onUnitTap,
+        );
+
+      case 'ayat':
+        return _AyatSection(
+          units: units,
+          activeUnitId: activeUnitId,
+          onUnitTap: onUnitTap,
+        );
+
+      case 'dua':
+        return _DuaSection(
+          units: units,
+          activeUnitId: activeUnitId,
+          onUnitTap: onUnitTap,
+        );
+
+      case 'explanation':
+        return _ExplanationUnit(
+          units: units,
+          activeUnitId: activeUnitId,
+          onUnitTap: onUnitTap,
+        );
+
+      case 'harf_grid':
+        return _HarfGridRow(
+          units: units,
+          activeUnitId: activeUnitId,
+          onUnitTap: onUnitTap,
+        );
+
+      case 'muqattaat':
+        return _MuqattaatRow(
+          units: units,
+          activeUnitId: activeUnitId,
+          onUnitTap: onUnitTap,
+        );
+
       case 'alphabet':
         return _LetterGrid(
           units: units,
@@ -262,6 +399,31 @@ class _NativePageRendererState extends State<NativePageRenderer> {
 
       case 'divider':
         return _OrnamentalDivider();
+
+      case 'maddi_table':
+        return _TableRow(
+          units: units,
+          activeUnitId: activeUnitId,
+          onUnitTap: onUnitTap,
+          isHeader: units.isNotEmpty && units.first.section.contains('headers'),
+          isMadd: true,
+        );
+
+      case 'madd_word_row':
+        return _TableRow(
+          units: units,
+          activeUnitId: activeUnitId,
+          onUnitTap: onUnitTap,
+          isMadd: true,
+          showBorders: false,
+        );
+
+      case 'note':
+        return _NoteUnit(
+          unit: units.first,
+          isActive: activeUnitId == units.first.id,
+          onTap: () => onUnitTap(units.first),
+        );
 
       case 'harakat':
       case 'syllable_row':
@@ -278,10 +440,83 @@ class _NativePageRendererState extends State<NativePageRenderer> {
   }
 }
 
+// ============================================================
+// NOTE UNIT — Translatable note/instruction at bottom of lesson
+// ============================================================
 
-// ============================================================
-// SECTION NAVIGATOR — Premium horizontal chips bar
-// ============================================================
+class _NoteUnit extends StatelessWidget {
+  final TextUnit unit;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _NoteUnit({
+    required this.unit,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  String _getTranslatedText(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final translations = unit.metadata['translations'] as Map<String, dynamic>?;
+    if (translations == null) return unit.textContent;
+
+    // Build locale key matching app_localizations.dart convention
+    String localeKey;
+    if (locale.languageCode == 'uz' && locale.countryCode == 'Cyrl') {
+      localeKey = 'uz_Cyrl';
+    } else {
+      localeKey = locale.languageCode;
+    }
+
+    return (translations[localeKey] as String?) ?? unit.textContent;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final isArabicScript = locale.languageCode == 'ar' ||
+        (locale.languageCode == 'uz' && locale.countryCode != 'Cyrl');
+    final text = _getTranslatedText(context);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: isActive
+              ? const Color(0xFFFFF8E1)
+              : const Color(0xFFFAF6ED),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive
+                ? const Color(0xFF8D6E63)
+                : const Color(0xFFD7CFC0),
+            width: isActive ? 2 : 1,
+          ),
+          boxShadow: isActive
+              ? [BoxShadow(color: const Color(0x1A8D6E63), blurRadius: 8, offset: const Offset(0, 2))]
+              : null,
+        ),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          textDirection: isArabicScript ? TextDirection.rtl : TextDirection.ltr,
+          style: TextStyle(
+            fontFamily: isArabicScript ? 'Amiri' : null,
+            fontSize: 17,
+            height: 1.7,
+            color: const Color(0xFF5D4037),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
 
 class _SectionNavigator extends StatelessWidget {
   final List<Section> sections;
@@ -806,15 +1041,9 @@ class _UnitRowState extends State<_UnitRow>
     int idx = 0;
     final total = widget.units.length;
 
-    // Always render all units in a single row — NEVER re-wrap.
-    // This preserves the original textbook word order on all screen sizes.
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth;
-        final cellMargin = 4.0;
-        // Calculate cell size to fit all units in one row
-        final computedSize = (availableWidth - (total * cellMargin * 2)) / total;
-        final cellSize = computedSize.clamp(28.0, 64.0);
 
         Widget buildCell(TextUnit unit, int i) {
           final isHovered = _hoveredUnitId == unit.id;
@@ -823,38 +1052,37 @@ class _UnitRowState extends State<_UnitRow>
               !isHovered &&
               widget.activeUnitId != unit.id;
 
-          return _LetterCell(
-            unit: unit,
-            cellSize: cellSize,
-            isHovered: isHovered,
-            isActive: isActive,
-            isDimmed: isDimmed,
-            staggerController: _staggerController,
-            staggerDelay: i / total,
-            onHoverChanged: (hovered) {
-              setState(() => _hoveredUnitId = hovered ? unit.id : null);
-            },
-            onTap: () => widget.onUnitTap(unit),
+          // Flex weight: longer words get proportionally more space
+          final textLen = unit.textContent.length;
+          final flex = textLen > 2 ? textLen : 2;
+
+          return Expanded(
+            flex: flex,
+            child: _LetterCell(
+              unit: unit,
+              cellSize: availableWidth / total, // just for height calc
+              isLargeText: widget.isLargeText,
+              isHovered: isHovered,
+              isActive: isActive,
+              isDimmed: isDimmed,
+              staggerController: _staggerController,
+              staggerDelay: i / total,
+              onHoverChanged: (hovered) {
+                setState(() => _hoveredUnitId = hovered ? unit.id : null);
+              },
+              onTap: () => widget.onUnitTap(unit),
+            ),
           );
         }
 
-        // Build all units in a single Row, use FittedBox to scale down
-        // if the row is too wide for the screen — this preserves order
-        final row = Directionality(
+        return Directionality(
           textDirection: TextDirection.rtl,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
             children: widget.units.map((unit) {
               return buildCell(unit, idx++);
             }).toList(),
           ),
-        );
-
-        return FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.center,
-          child: row,
         );
       },
     );
@@ -868,6 +1096,7 @@ class _UnitRowState extends State<_UnitRow>
 class _LetterCell extends StatefulWidget {
   final TextUnit unit;
   final double cellSize;
+  final bool isLargeText;
   final bool isHovered;
   final bool isActive;
   final bool isDimmed;
@@ -879,6 +1108,7 @@ class _LetterCell extends StatefulWidget {
   const _LetterCell({
     required this.unit,
     this.cellSize = 60.0,
+    this.isLargeText = false,
     required this.isHovered,
     required this.isActive,
     required this.isDimmed,
@@ -937,15 +1167,18 @@ class _LetterCellState extends State<_LetterCell>
 
   @override
   Widget build(BuildContext context) {
-    // Adaptive cell size based on text length and provided cellSize
+    // Fixed font sizes: titles always 36, exercises always 22/20
     final textLen = widget.unit.textContent.length;
     final isWord = textLen > 2;
-    final baseSize = widget.cellSize;
-    final cellWidth = isWord ? math.max(baseSize, textLen * (baseSize * 0.37)) : baseSize;
-    final cellHeight = baseSize;
-    // Scale font size proportionally to cell size
-    final fontScale = baseSize / 60.0;
-    final fontSize = isWord ? 28.0 * fontScale : 34.0 * fontScale;
+    // Fixed cell height: titles 64px, exercises 40px
+    final cellHeight = widget.isLargeText ? 64.0 : 40.0;
+    // Fixed font sizes — consistent across all rows
+    final double fontSize;
+    if (widget.isLargeText) {
+      fontSize = 36.0; // Dars sarlavhasi — katta, doimiy
+    } else {
+      fontSize = isWord ? 20.0 : 22.0; // Dars matnlari — doimiy
+    }
 
     return AnimatedBuilder(
       animation: Listenable.merge([_tapScale, _entryAnimation]),
@@ -978,9 +1211,8 @@ class _LetterCellState extends State<_LetterCell>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeOutCubic,
-                width: cellWidth,
                 height: cellHeight,
-                margin: EdgeInsets.symmetric(horizontal: baseSize < 50 ? 1 : 2, vertical: baseSize < 50 ? 1 : 2),
+                margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   color: widget.isActive
@@ -1763,6 +1995,114 @@ class _OrnamentalDivider extends StatelessWidget {
 }
 
 // ============================================================
+// ULTRA UI LESSON DIVIDER — Premium separator between lessons
+// ============================================================
+
+class _LessonDivider extends StatelessWidget {
+  const _LessonDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      child: SizedBox(
+        height: 32,
+        child: Row(
+          children: [
+            // Left gradient line
+            Expanded(
+              child: Container(
+                height: 1.2,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      AppColors.gold.withOpacity(0.12),
+                      AppColors.gold.withOpacity(0.35),
+                    ],
+                    stops: const [0.0, 0.4, 1.0],
+                  ),
+                ),
+              ),
+            ),
+            // Center ornament
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildOrnamentDot(3.0, 0.2),
+                  const SizedBox(width: 5),
+                  _buildOrnamentDot(4.0, 0.3),
+                  const SizedBox(width: 5),
+                  // Center diamond
+                  Transform.rotate(
+                    angle: math.pi / 4,
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.gold.withOpacity(0.5),
+                            AppColors.primary.withOpacity(0.4),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(1),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.gold.withOpacity(0.15),
+                            blurRadius: 4,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  _buildOrnamentDot(4.0, 0.3),
+                  const SizedBox(width: 5),
+                  _buildOrnamentDot(3.0, 0.2),
+                ],
+              ),
+            ),
+            // Right gradient line
+            Expanded(
+              child: Container(
+                height: 1.2,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.gold.withOpacity(0.35),
+                      AppColors.gold.withOpacity(0.12),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.6, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrnamentDot(double size, double opacity) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.gold.withOpacity(opacity),
+      ),
+    );
+  }
+}
+
+// ============================================================
 // IMAGE OVERLAY RENDERER
 // For published pages with uploaded images + bbox-positioned units.
 // Renders the source image as background with interactive hotspots.
@@ -2086,6 +2426,909 @@ class _OverlayHotspotState extends State<_OverlayHotspot>
           ),
         );
       },
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TABLE ROW — jadval qatori vertikal chiziqlar bilan
+// Supports both simple (3 units = 1 word/cell) and grouped (9 units = 3 words/cell)
+// ═══════════════════════════════════════════════════════════════════════
+
+class _TableRow extends StatelessWidget {
+  final List<TextUnit> units;
+  final int? activeUnitId;
+  final ValueChanged<TextUnit> onUnitTap;
+  final bool isHeader;
+  final bool isMadd;
+  final bool showBorders;
+
+  const _TableRow({
+    required this.units,
+    required this.activeUnitId,
+    required this.onUnitTap,
+    this.isHeader = false,
+    this.isMadd = false,
+    this.showBorders = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (units.isEmpty) return const SizedBox.shrink();
+
+    final cellHeight = isHeader ? 52.0 : 44.0;
+    final numUnits = units.length;
+    // For borderless rows (madd_word_row), show all words as separate columns
+    // For bordered table rows, keep 3-column layout
+    final numColumns = showBorders ? 3 : numUnits;
+
+    // Determine if grouped (multi-word per cell) or simple (1 word per cell)
+    final bool isGrouped = showBorders && numUnits > numColumns && numUnits % numColumns == 0;
+    final wordsPerCell = isGrouped ? numUnits ~/ numColumns : 1;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+        decoration: showBorders ? BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: Colors.grey.shade300,
+              width: 0.5,
+            ),
+          ),
+        ) : null,
+        child: IntrinsicHeight(
+          child: Row(
+            children: _buildColumns(numColumns, wordsPerCell, cellHeight),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildColumns(int numColumns, int wordsPerCell, double cellHeight) {
+    final widgets = <Widget>[];
+    final actualColumns = (units.length / wordsPerCell).ceil().clamp(1, numColumns);
+
+    for (int col = 0; col < actualColumns; col++) {
+      if (col > 0 && showBorders) {
+        // Vertical divider between main columns
+        widgets.add(Container(
+          width: 1,
+          color: Colors.grey.shade400,
+        ));
+      }
+
+      final startIdx = col * wordsPerCell;
+      final endIdx = (startIdx + wordsPerCell).clamp(0, units.length);
+      final cellUnits = units.sublist(startIdx, endIdx);
+
+      widgets.add(Expanded(
+        child: _buildCell(cellUnits, cellHeight),
+      ));
+    }
+
+    return widgets;
+  }
+
+  Widget _buildCell(List<TextUnit> cellUnits, double cellHeight) {
+    final fontSize = isHeader ? 30.0 : (cellUnits.length > 1 ? 22.0 : 26.0);
+
+    // Check if any unit in this cell is active
+    final hasActive = cellUnits.any((u) => activeUnitId == u.id);
+
+    return Container(
+      height: cellHeight,
+      decoration: BoxDecoration(
+        color: isHeader ? Colors.grey.shade50 : Colors.transparent,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: cellUnits.map((unit) {
+          final isActive = activeUnitId == unit.id;
+          return Flexible(
+            child: GestureDetector(
+              onTap: () => onUnitTap(unit),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? const Color(0xFF1B5E20).withOpacity(0.12)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                alignment: Alignment.center,
+                child: isMadd
+                    ? _buildMaddText(
+                        unit.textContent,
+                        fontSize,
+                        isActive,
+                        isHeader: isHeader,
+                      )
+                    : Text(
+                        unit.textContent,
+                        textDirection: TextDirection.rtl,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'ScheherazadeNew',
+                          fontSize: fontSize,
+                          fontWeight: isHeader ? FontWeight.w700 : FontWeight.w500,
+                          color: isActive
+                              ? const Color(0xFF1B5E20)
+                              : (isHeader
+                                  ? Colors.black87
+                                  : Colors.black.withOpacity(0.85)),
+                          height: 1.3,
+                        ),
+                      ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// Builds Arabic text with madd-specific diacritics using Unicode substitution:
+  /// - Fatha (U+064E) → Superscript Alef (U+0670) — standing/vertical fatha
+  /// - Kasra (U+0650) → Subscript Alef (U+0656) — standing/vertical kasra
+  /// - Damma stays as font's own character (no split, preserves ligatures)
+  /// Arabic ligatures are fully preserved since text stays as one unit.
+  Widget _buildMaddText(String text, double fontSize, bool isActive, {bool isHeader = false}) {
+    final Color textColor = isActive
+        ? const Color(0xFF1B5E20)
+        : (isHeader ? Colors.black87 : Colors.black.withOpacity(0.85));
+
+    // Special case: standalone اَا (alif+fatha+alif) or اَ (alif+fatha) cell — render as
+    // bare alif with a hand-drawn vertical line on top (tikka fatha).
+    // Only apply to standalone alif cells (rune length <= 3), not longer words.
+    final runes0 = text.runes.toList();
+    final isStandaloneAlif = (runes0.length == 3 &&
+        runes0[0] == 0x0627 && runes0[1] == 0x064E && runes0[2] == 0x0627) ||
+        (runes0.length == 2 && runes0[0] == 0x0627 && runes0[1] == 0x064E);
+    if (isStandaloneAlif) {
+      final lineHeight = fontSize * 0.22;
+      final lineWidth = fontSize * 0.06;
+      return Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          Text(
+            '\u0627', // bare alif
+            textDirection: TextDirection.rtl,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'ScheherazadeNew',
+              fontSize: fontSize,
+              fontWeight: isHeader ? FontWeight.w800 : FontWeight.w600,
+              color: textColor,
+              height: 1.3,
+            ),
+          ),
+          Positioned(
+            top: fontSize * -0.05,
+            child: Container(
+              width: lineWidth,
+              height: lineHeight,
+              decoration: BoxDecoration(
+                color: textColor,
+                borderRadius: BorderRadius.circular(lineWidth / 2),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // For all other text: apply Unicode substitution for tikka fatha/kasra
+    final runes = text.runes.toList();
+    final buffer = StringBuffer();
+    for (int i = 0; i < runes.length; i++) {
+      final cp = runes[i];
+      if (cp == 0x064E) {
+        // Fatha → Superscript Alef (tikka) for non-alif letters
+        buffer.write('\u0670');
+      } else if (cp == 0x0650) {
+        // Kasra → Subscript Alef (tikka)
+        buffer.write('\u0656');
+      } else {
+        buffer.write(String.fromCharCode(cp));
+      }
+    }
+    final modified = buffer.toString();
+
+    return Text(
+      modified,
+      textDirection: TextDirection.rtl,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontFamily: 'ScheherazadeNew',
+        fontSize: fontSize,
+        fontWeight: isHeader ? FontWeight.w800 : FontWeight.w600,
+        color: textColor,
+        height: 1.3,
+      ),
+    );
+  }
+}
+
+// ============================================================
+// SURAH TITLE — Decorative surah header with ornamental border
+// ============================================================
+
+class _SurahTitle extends StatelessWidget {
+  final TextUnit unit;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _SurahTitle({
+    required this.unit,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        decoration: BoxDecoration(
+          color: isActive
+              ? const Color(0xFF1B5E20).withOpacity(0.08)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFF2E7D32).withOpacity(0.4),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('﴾',
+                style: TextStyle(
+                    fontFamily: 'Amiri',
+                    fontSize: 24,
+                    color: const Color(0xFF2E7D32).withOpacity(0.6))),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                unit.textContent,
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+                style: TextStyle(
+                  fontFamily: 'Amiri',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: isActive
+                      ? const Color(0xFF1B5E20)
+                      : const Color(0xFF2E7D32),
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text('﴿',
+                style: TextStyle(
+                    fontFamily: 'Amiri',
+                    fontSize: 24,
+                    color: const Color(0xFF2E7D32).withOpacity(0.6))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// AYAT SECTION — Flowing Quranic verse text, large Amiri font
+// ============================================================
+
+class _AyatSection extends StatelessWidget {
+  final List<TextUnit> units;
+  final int? activeUnitId;
+  final void Function(TextUnit) onUnitTap;
+
+  const _AyatSection({
+    required this.units,
+    required this.activeUnitId,
+    required this.onUnitTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: units.map((unit) {
+          final isActive = unit.id == activeUnitId;
+          return GestureDetector(
+            onTap: () => onUnitTap(unit),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              margin: const EdgeInsets.symmetric(vertical: 2),
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? const Color(0xFF1B5E20).withOpacity(0.06)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                unit.textContent,
+                textAlign: TextAlign.right,
+                textDirection: TextDirection.rtl,
+                style: TextStyle(
+                  fontFamily: 'Amiri',
+                  fontSize: 24,
+                  fontWeight: FontWeight.w500,
+                  color: isActive
+                      ? const Color(0xFF1B5E20)
+                      : Colors.black.withOpacity(0.88),
+                  height: 1.8,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// DUA SECTION — Centered dua/kalima text with premium styling
+// ============================================================
+
+class _DuaSection extends StatelessWidget {
+  final List<TextUnit> units;
+  final int? activeUnitId;
+  final void Function(TextUnit) onUnitTap;
+
+  const _DuaSection({
+    required this.units,
+    required this.activeUnitId,
+    required this.onUnitTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: units.map((unit) {
+          final isActive = unit.id == activeUnitId;
+          return GestureDetector(
+            onTap: () => onUnitTap(unit),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              margin: const EdgeInsets.symmetric(vertical: 2),
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? const Color(0xFF1B5E20).withOpacity(0.07)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                unit.textContent,
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+                style: TextStyle(
+                  fontFamily: 'Amiri',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: isActive
+                      ? const Color(0xFF1B5E20)
+                      : Colors.black.withOpacity(0.85),
+                  height: 1.8,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// EXPLANATION UNIT — Smaller text for explanations/footnotes
+// ============================================================
+
+class _ExplanationUnit extends StatelessWidget {
+  final List<TextUnit> units;
+  final int? activeUnitId;
+  final void Function(TextUnit) onUnitTap;
+
+  const _ExplanationUnit({
+    required this.units,
+    required this.activeUnitId,
+    required this.onUnitTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: units.map((unit) {
+          final isActive = unit.id == activeUnitId;
+          return GestureDetector(
+            onTap: () => onUnitTap(unit),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              margin: const EdgeInsets.symmetric(vertical: 2),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? const Color(0xFF1B5E20).withOpacity(0.06)
+                    : const Color(0xFFF5F5F0).withOpacity(0.5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFF9E9E9E).withOpacity(0.15),
+                  width: 0.5,
+                ),
+              ),
+              child: Text(
+                unit.textContent,
+                textAlign: TextAlign.right,
+                textDirection: TextDirection.rtl,
+                style: TextStyle(
+                  fontFamily: 'Amiri',
+                  fontSize: 17,
+                  fontWeight: FontWeight.w400,
+                  color: isActive
+                      ? const Color(0xFF1B5E20)
+                      : Colors.black.withOpacity(0.7),
+                  height: 1.7,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// HARF GRID ROW — Arabic letters with names below in grid
+// ============================================================
+
+class _HarfGridRow extends StatelessWidget {
+  final List<TextUnit> units;
+  final int? activeUnitId;
+  final void Function(TextUnit) onUnitTap;
+
+  const _HarfGridRow({
+    required this.units,
+    required this.activeUnitId,
+    required this.onUnitTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 4,
+          runSpacing: 6,
+          children: units.map((unit) {
+            final isActive = unit.id == activeUnitId;
+            final label = (unit.metadata['label'] as String?) ?? '';
+            return GestureDetector(
+              onTap: () => onUnitTap(unit),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 70,
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? const Color(0xFF1B5E20).withOpacity(0.08)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      unit.textContent,
+                      textDirection: TextDirection.rtl,
+                      style: TextStyle(
+                        fontFamily: 'Amiri',
+                        fontSize: 36,
+                        fontWeight: FontWeight.w600,
+                        color: isActive
+                            ? const Color(0xFF1B5E20)
+                            : Colors.black87,
+                        height: 1.2,
+                      ),
+                    ),
+                    if (label.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        label,
+                        textDirection: TextDirection.rtl,
+                        style: TextStyle(
+                          fontFamily: 'Amiri',
+                          fontSize: 13,
+                          color: isActive
+                              ? const Color(0xFF1B5E20)
+                              : Colors.black54,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// MUQATTA'AT ROW — Quranic disconnected letters with readings
+// ============================================================
+
+class _MuqattaatRow extends StatelessWidget {
+  final List<TextUnit> units;
+  final int? activeUnitId;
+  final void Function(TextUnit) onUnitTap;
+
+  const _MuqattaatRow({
+    required this.units,
+    required this.activeUnitId,
+    required this.onUnitTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 10,
+          runSpacing: 8,
+          children: units.map((unit) {
+            final isActive = unit.id == activeUnitId;
+            final reading = (unit.metadata['reading'] as String?) ?? '';
+            return GestureDetector(
+              onTap: () => onUnitTap(unit),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? const Color(0xFF1B5E20).withOpacity(0.08)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isActive
+                        ? const Color(0xFF2E7D32).withOpacity(0.3)
+                        : const Color(0xFF9E9E9E).withOpacity(0.15),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      unit.textContent,
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Amiri',
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: isActive
+                            ? const Color(0xFF1B5E20)
+                            : const Color(0xFF2E7D32),
+                        height: 1.3,
+                      ),
+                    ),
+                    if (reading.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        reading,
+                        textDirection: TextDirection.rtl,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Amiri',
+                          fontSize: 14,
+                          color: isActive
+                              ? const Color(0xFF1B5E20)
+                              : Colors.black54,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// MADD INTRO NOTE — Ultra premium multilingual note widget
+// Shows madd (elongation) introduction with 5-language support
+// ============================================================
+
+class _MaddIntroNote extends StatelessWidget {
+  final List<TextUnit> units;
+  final int? activeUnitId;
+  final void Function(TextUnit) onUnitTap;
+
+  const _MaddIntroNote({
+    required this.units,
+    required this.activeUnitId,
+    required this.onUnitTap,
+  });
+
+  String _getText(TextUnit unit, BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final translations = unit.metadata['translations'] as Map<String, dynamic>?;
+    if (translations == null) return unit.textContent;
+
+    String localeKey;
+    if (locale.languageCode == 'uz' && locale.countryCode == 'Cyrl') {
+      localeKey = 'uz_Cyrl';
+    } else {
+      localeKey = locale.languageCode;
+    }
+
+    return (translations[localeKey] as String?) ?? unit.textContent;
+  }
+
+  bool _isArabicDisplay(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    return locale.languageCode == 'ar';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (units.isEmpty) return const SizedBox.shrink();
+
+    final isArabic = _isArabicDisplay(context);
+    final textDir = isArabic ? TextDirection.rtl : TextDirection.ltr;
+
+    // Separate title and lines using 'role' metadata
+    final titleUnit = units.firstWhere(
+      (u) => (u.metadata['role'] as String?) == 'title',
+      orElse: () => units.first,
+    );
+    final lineUnits = units.where((u) => (u.metadata['role'] as String?) == 'line').toList();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFFF5F0E8),
+            const Color(0xFFFAF6F0),
+            const Color(0xFFF0EDE5),
+          ],
+        ),
+        border: Border.all(
+          color: const Color(0xFFB8A88A).withOpacity(0.5),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF8D6E63).withOpacity(0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.white.withOpacity(0.8),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ═══ Title bar with gradient ═══
+            GestureDetector(
+              onTap: () => onUnitTap(titleUnit),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF5D4037).withOpacity(0.9),
+                      const Color(0xFF795548).withOpacity(0.85),
+                      const Color(0xFF8D6E63).withOpacity(0.8),
+                    ],
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.lightbulb_outline,
+                        color: Color(0xFFFFD54F),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        _getText(titleUnit, context),
+                        textAlign: TextAlign.center,
+                        textDirection: textDir,
+                        style: TextStyle(
+                          fontFamily: isArabic ? 'Amiri' : null,
+                          fontSize: isArabic ? 22 : 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          height: 1.4,
+                          letterSpacing: isArabic ? 0 : 0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.lightbulb_outline,
+                        color: Color(0xFFFFD54F),
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ═══ Decorative top accent ═══
+            Container(
+              height: 3,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFFFFD54F).withOpacity(0),
+                    const Color(0xFFFFD54F).withOpacity(0.6),
+                    const Color(0xFFFFD54F).withOpacity(0),
+                  ],
+                ),
+              ),
+            ),
+
+            // ═══ Content lines ═══
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+              child: Column(
+                children: lineUnits.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final unit = entry.value;
+                  final isActive = unit.id == activeUnitId;
+                  final text = _getText(unit, context);
+
+                  // Determine icon for each line
+                  IconData lineIcon;
+                  Color iconColor;
+                  switch (idx) {
+                    case 0:
+                      lineIcon = Icons.info_outline;
+                      iconColor = const Color(0xFF1976D2);
+                      break;
+                    case 1:
+                      lineIcon = Icons.format_shapes;
+                      iconColor = const Color(0xFF388E3C);
+                      break;
+                    case 2:
+                      lineIcon = Icons.text_increase;
+                      iconColor = const Color(0xFFE65100);
+                      break;
+                    default:
+                      lineIcon = Icons.warning_amber_rounded;
+                      iconColor = const Color(0xFFD32F2F);
+                  }
+
+                  return GestureDetector(
+                    onTap: () => onUnitTap(unit),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOut,
+                      margin: EdgeInsets.only(
+                        top: idx == 0 ? 0 : 10,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? const Color(0xFF5D4037).withOpacity(0.06)
+                            : Colors.white.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isActive
+                              ? const Color(0xFF5D4037).withOpacity(0.3)
+                              : const Color(0xFFD7CFC0).withOpacity(0.5),
+                          width: isActive ? 1.5 : 0.5,
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        textDirection: textDir,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(top: 2),
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: iconColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(lineIcon, color: iconColor, size: 18),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              text,
+                              textDirection: textDir,
+                              style: TextStyle(
+                                fontFamily: isArabic ? 'Amiri' : null,
+                                fontSize: isArabic ? 19 : 15.5,
+                                fontWeight: FontWeight.w500,
+                                color: isActive
+                                    ? const Color(0xFF3E2723)
+                                    : const Color(0xFF5D4037),
+                                height: 1.7,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

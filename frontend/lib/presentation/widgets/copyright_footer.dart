@@ -7,12 +7,6 @@ class CopyrightFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // VAQTINCHALIK OLIB TASHLANDI — Android nashr uchun
-    // Asl kodni qaytarish kerak:
-    // final isDark = Theme.of(context).brightness == Brightness.dark;
-    // final l = AppLocalizations.of(context)!;
-    return const SizedBox.shrink();
-    /*
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l = AppLocalizations.of(context)!;
 
@@ -73,6 +67,5 @@ class CopyrightFooter extends StatelessWidget {
         ],
       ),
     );
-    */
   }
 }

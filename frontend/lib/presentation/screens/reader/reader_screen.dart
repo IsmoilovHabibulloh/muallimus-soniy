@@ -538,26 +538,26 @@ class _AudioBar extends StatelessWidget {
 
               const SizedBox(width: 12),
 
-              // ── Audio control buttons (VAQTINCHALIK OLIB TASHLANDI — Android nashr uchun) ──
-              // _ControlButton(
-              //   icon: isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              //   isPrimary: true,
-              //   isActive: isActive,
-              //   onTap: isPlaying ? onPause : onPlay,
-              //   size: 44,
-              // ),
-              // const SizedBox(width: 8),
-              // AnimatedOpacity(
-              //   opacity: isActive ? 1.0 : 0.4,
-              //   duration: const Duration(milliseconds: 200),
-              //   child: _ControlButton(
-              //     icon: Icons.stop_rounded,
-              //     isPrimary: false,
-              //     isActive: isActive,
-              //     onTap: isActive ? onStop : null,
-              //     size: 36,
-              //   ),
-              // ),
+              // ── Audio control buttons ──
+              _ControlButton(
+                icon: isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                isPrimary: true,
+                isActive: isActive,
+                onTap: isPlaying ? onPause : onPlay,
+                size: 44,
+              ),
+              const SizedBox(width: 8),
+              AnimatedOpacity(
+                opacity: isActive ? 1.0 : 0.4,
+                duration: const Duration(milliseconds: 200),
+                child: _ControlButton(
+                  icon: Icons.stop_rounded,
+                  isPrimary: false,
+                  isActive: isActive,
+                  onTap: isActive ? onStop : null,
+                  size: 36,
+                ),
+              ),
             ],
           ),
         ],

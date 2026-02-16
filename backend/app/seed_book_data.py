@@ -291,3 +291,116 @@ PAGES[16] = [
     ("ذَفَرَ – ظَفَرَ، حَظَرَ – حَضَرَ، ظَهْرُ – ضَهْرُ", "zha_compare_1", "sentence"),
     ("زَهَرَ – ظَهَرَ، اَزْهَرَ – اَظْهَرَ، اَعْزِمُ – اَعْظِمُ", "zha_compare_2", "sentence"),
 ]
+
+# ═══════════════════════════════════════════════════
+# Sahifa 17: مدلی حرفلر (Madd harflari jadvali)
+# Har bir harf bilan uzun unli (اَ، ـیِ، ـوُ) birikmalari
+# ═══════════════════════════════════════════════════
+PAGES[17] = [
+    # Sarlavha
+    ("مدلی حرفلر", "maddi_title", "sentence"),
+    # Ustun sarlavhalari
+    ("اَ ـیِ ـوُ", "maddi_headers", "letter"),
+    # Alif (ا) qatori
+    ("اَا اِی اُو", "maddi_alif", "word"),
+    # Ba (ب) qatori
+    ("بَا بِی بُو", "maddi_ba", "word"),
+    # Ta (ت) qatori
+    ("تَا تِی تُو", "maddi_ta", "word"),
+    # Tha (ث) qatori
+    ("ثَا ثِی ثُو", "maddi_tha", "word"),
+    # Jim (ج) qatori
+    ("جَا جِی جُو", "maddi_jim", "word"),
+    # Kha (خ) qatori — Ha (ح) orasida
+    ("حَا حِی حُو", "maddi_ha_h", "word"),
+    ("خَا خِی خُو", "maddi_kha", "word"),
+    # Dal (د) qatori
+    ("دَا دِی دُو", "maddi_dal", "word"),
+    # Dhal (ذ) qatori
+    ("ذَا ذِی ذُو", "maddi_dhal", "word"),
+    # Ra (ر) qatori
+    ("رَا رِی رُو", "maddi_ra", "word"),
+    # Zay (ز) qatori
+    ("زَا زِی زُو", "maddi_zay", "word"),
+    # Sin (س) qatori
+    ("سَا سِی سُو", "maddi_sin", "word"),
+    # Shin (ش) qatori
+    ("شَا شِی شُو", "maddi_shin", "word"),
+    # Sad (ص) qatori
+    ("صَا صِی صُو", "maddi_sad", "word"),
+    # Dad (ض) qatori
+    ("ضَا ضِی ضُو", "maddi_dad", "word"),
+    # Ta-ط (ط) qatori
+    ("طَا طِی طُو", "maddi_ta_t", "word"),
+    # Zha (ظ) qatori
+    ("ظَا ظِی ظُو", "maddi_zha", "word"),
+    # Ayn (ع) qatori
+    ("عَا عِی عُو", "maddi_ayn", "word"),
+    # Ghayn (غ) qatori
+    ("غَا غِی غُو", "maddi_ghayn", "word"),
+    # Fa (ف) qatori
+    ("فَا فِی فُو", "maddi_fa", "word"),
+    # Qaf (ق) qatori
+    ("قَا قِی قُو", "maddi_qaf", "word"),
+    # Kaf (ك) qatori
+    ("كَا كِی كُو", "maddi_kaf", "word"),
+    # Lam (ل) qatori
+    ("لَا لِی لُو", "maddi_lam", "word"),
+    # Mim (م) qatori
+    ("مَا مِی مُو", "maddi_mim", "word"),
+    # Nun (ن) qatori
+    ("نَا نِی نُو", "maddi_nun", "word"),
+    # Waw (و) qatori
+    ("وَا وِی وُو", "maddi_waw", "word"),
+    # Ha-ه (ه) qatori
+    ("هَا هِی هُو", "maddi_ha", "word"),
+    # Ya (ي) qatori
+    ("يَا يِی يُو", "maddi_ya", "word"),
+]
+
+# ═══════════════════════════════════════════════════
+# Sahifa 18: مدلی حرفلر mashq jadvali
+# Har bir so'z alohida unit. Kasra shakli BOSHQA harfdan:
+# Cell1↔Cell2 kasra almashinadi, Cell3 keyingi qator Cell1dan oladi
+# ═══════════════════════════════════════════════════
+PAGES[18] = [
+    # Row 1: Ba(ب), Ya(ي), Ta(ت) — kasra: Ya, Ba, Ha
+    ("بَا", "maddi_ex_r1", "word"), ("يِی", "maddi_ex_r1", "word"), ("بُو", "maddi_ex_r1", "word"),
+    ("يَا", "maddi_ex_r1", "word"), ("بِی", "maddi_ex_r1", "word"), ("يُو", "maddi_ex_r1", "word"),
+    ("تَا", "maddi_ex_r1", "word"), ("هِی", "maddi_ex_r1", "word"), ("تُو", "maddi_ex_r1", "word"),
+    # Row 2: Ha(ه), Tha(ث), Waw(و) — kasra: Tha, Ha, Jim
+    ("هَا", "maddi_ex_r2", "word"), ("ثِی", "maddi_ex_r2", "word"), ("هُو", "maddi_ex_r2", "word"),
+    ("ثَا", "maddi_ex_r2", "word"), ("هِی", "maddi_ex_r2", "word"), ("ثُو", "maddi_ex_r2", "word"),
+    ("وَا", "maddi_ex_r2", "word"), ("جِی", "maddi_ex_r2", "word"), ("وُو", "maddi_ex_r2", "word"),
+    # Row 3: Jim(ج), Nun(ن), Ha-h(ح) — kasra: Nun, Jim, Mim
+    ("جَا", "maddi_ex_r3", "word"), ("نِی", "maddi_ex_r3", "word"), ("جُو", "maddi_ex_r3", "word"),
+    ("نَا", "maddi_ex_r3", "word"), ("جِی", "maddi_ex_r3", "word"), ("نُو", "maddi_ex_r3", "word"),
+    ("حَا", "maddi_ex_r3", "word"), ("مِی", "maddi_ex_r3", "word"), ("حُو", "maddi_ex_r3", "word"),
+    # Row 4: Mim(م), Kha(خ), Lam(ل) — kasra: Kha, Mim, Dal
+    ("مَا", "maddi_ex_r4", "word"), ("خِی", "maddi_ex_r4", "word"), ("مُو", "maddi_ex_r4", "word"),
+    ("خَا", "maddi_ex_r4", "word"), ("مِی", "maddi_ex_r4", "word"), ("خُو", "maddi_ex_r4", "word"),
+    ("لَا", "maddi_ex_r4", "word"), ("دِی", "maddi_ex_r4", "word"), ("لُو", "maddi_ex_r4", "word"),
+    # Row 5: Dal(د), Kaf(ك), Dhal(ذ) — kasra: Kaf, Dal, Qaf
+    ("دَا", "maddi_ex_r5", "word"), ("كِی", "maddi_ex_r5", "word"), ("دُو", "maddi_ex_r5", "word"),
+    ("كَا", "maddi_ex_r5", "word"), ("دِی", "maddi_ex_r5", "word"), ("كُو", "maddi_ex_r5", "word"),
+    ("ذَا", "maddi_ex_r5", "word"), ("قِی", "maddi_ex_r5", "word"), ("ذُو", "maddi_ex_r5", "word"),
+    # Row 6: Qaf(ق), Ra(ر), Fa(ف) — kasra: Ra, Qaf, Zay
+    ("قَا", "maddi_ex_r6", "word"), ("رِی", "maddi_ex_r6", "word"), ("قُو", "maddi_ex_r6", "word"),
+    ("رَا", "maddi_ex_r6", "word"), ("قِی", "maddi_ex_r6", "word"), ("رُو", "maddi_ex_r6", "word"),
+    ("فَا", "maddi_ex_r6", "word"), ("زِی", "maddi_ex_r6", "word"), ("فُو", "maddi_ex_r6", "word"),
+    # Row 7: Zay(ز), Ghayn(غ), Sin(س) — kasra: Ghayn, Zay, Ayn
+    ("زَا", "maddi_ex_r7", "word"), ("غِی", "maddi_ex_r7", "word"), ("زُو", "maddi_ex_r7", "word"),
+    ("غَا", "maddi_ex_r7", "word"), ("زِی", "maddi_ex_r7", "word"), ("غُو", "maddi_ex_r7", "word"),
+    ("سَا", "maddi_ex_r7", "word"), ("عِی", "maddi_ex_r7", "word"), ("سُو", "maddi_ex_r7", "word"),
+    # Row 8: Ayn(ع), Shin(ش), Zha(ظ) — kasra: Shin, Ayn, Sad
+    ("عَا", "maddi_ex_r8", "word"), ("شِی", "maddi_ex_r8", "word"), ("عُو", "maddi_ex_r8", "word"),
+    ("شَا", "maddi_ex_r8", "word"), ("عِی", "maddi_ex_r8", "word"), ("شُو", "maddi_ex_r8", "word"),
+    ("ظَا", "maddi_ex_r8", "word"), ("صِی", "maddi_ex_r8", "word"), ("ظُو", "maddi_ex_r8", "word"),
+    # Row 9: Sad(ص), Ta-t(ط), Dad(ض) — kasra: Ta-t, Sad, Alif
+    ("صَا", "maddi_ex_r9", "word"), ("طِی", "maddi_ex_r9", "word"), ("صُو", "maddi_ex_r9", "word"),
+    ("طَا", "maddi_ex_r9", "word"), ("صِی", "maddi_ex_r9", "word"), ("طُو", "maddi_ex_r9", "word"),
+    ("ضَا", "maddi_ex_r9", "word"), ("اِی", "maddi_ex_r9", "word"), ("ضُو", "maddi_ex_r9", "word"),
+    # Izoh
+    ("اوشبو درسده یازیلگان حرفلرنینگ هر قایسیسی خطاسیز مد قیلینماگونچه کیینگی درسلر کورسه تلمیدی", "maddi_ex_note", "sentence"),
+]
+
