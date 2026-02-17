@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/colors.dart';
@@ -2898,9 +2899,10 @@ class _SurahTitle extends StatelessWidget {
 
 // ============================================================
 // AYAT SECTION — Flowing Quranic verse text (continuous like original book)
+// Uses pure TextSpan for true inline flowing — all ayats in one paragraph
 // ============================================================
 
-class _AyatSection extends StatelessWidget {
+class _AyatSection extends StatefulWidget {
   final List<TextUnit> units;
   final int? activeUnitId;
   final void Function(TextUnit) onUnitTap;
@@ -2912,58 +2914,70 @@ class _AyatSection extends StatelessWidget {
   });
 
   @override
+  State<_AyatSection> createState() => _AyatSectionState();
+}
+
+class _AyatSectionState extends State<_AyatSection> {
+  final List<TapGestureRecognizer> _recognizers = [];
+
+  @override
+  void dispose() {
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Dispose old recognizers
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    _recognizers.clear();
+
     final sw = MediaQuery.of(context).size.width;
     final fontSize = sw < 400 ? 18.0 : 21.0;
 
-    // Build flowing inline spans — all ayats in one continuous paragraph
-    final spans = <InlineSpan>[];
-    for (int i = 0; i < units.length; i++) {
-      final unit = units[i];
-      final isActive = unit.id == activeUnitId;
+    // Build flowing TextSpans — all ayats as one continuous text
+    final spans = <TextSpan>[];
+    for (int i = 0; i < widget.units.length; i++) {
+      final unit = widget.units[i];
+      final isActive = unit.id == widget.activeUnitId;
 
-      spans.add(WidgetSpan(
-        alignment: PlaceholderAlignment.baseline,
-        baseline: TextBaseline.alphabetic,
-        child: GestureDetector(
-          onTap: () => onUnitTap(unit),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? const Color(0xFF1B5E20).withOpacity(0.10)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              unit.textContent,
-              textDirection: TextDirection.rtl,
-              style: TextStyle(
-                fontFamily: 'ScheherazadeNew',
-                fontSize: fontSize,
-                fontWeight: FontWeight.w500,
-                color: isActive
-                    ? const Color(0xFF1B5E20)
-                    : Colors.black.withOpacity(0.88),
-                height: 1.85,
-              ),
-            ),
-          ),
+      final recognizer = TapGestureRecognizer()
+        ..onTap = () => widget.onUnitTap(unit);
+      _recognizers.add(recognizer);
+
+      spans.add(TextSpan(
+        text: unit.textContent,
+        recognizer: recognizer,
+        style: TextStyle(
+          fontFamily: 'ScheherazadeNew',
+          fontSize: fontSize,
+          fontWeight: FontWeight.w500,
+          color: isActive
+              ? const Color(0xFF1B5E20)
+              : Colors.black.withOpacity(0.88),
+          height: 1.85,
+          backgroundColor: isActive
+              ? const Color(0xFF1B5E20).withOpacity(0.10)
+              : null,
         ),
       ));
 
-      // Add small space between ayats
-      if (i < units.length - 1) {
+      // Add separator between ayats
+      if (i < widget.units.length - 1) {
         spans.add(const TextSpan(text: '  '));
       }
     }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: Text.rich(
-        TextSpan(children: spans),
+      child: RichText(
         textAlign: TextAlign.right,
         textDirection: TextDirection.rtl,
+        text: TextSpan(children: spans),
       ),
     );
   }
