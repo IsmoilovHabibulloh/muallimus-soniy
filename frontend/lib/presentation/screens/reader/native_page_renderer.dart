@@ -2580,15 +2580,33 @@ class _TableRow extends StatelessWidget {
     final runes = text.runes.toList();
     for (int i = 0; i < runes.length - 1; i++) {
       final cp = runes[i];
-      final next = runes[i + 1];
+      final next = _findNextBaseLetter(runes, i);
+      if (next == null) continue;
       // Fatha + Alif = madd
       if (cp == 0x064E && next == 0x0627) return true;
       // Damma + Waw = madd
       if (cp == 0x064F && next == 0x0648) return true;
-      // Kasra + Ya (either form) = madd
-      if (cp == 0x0650 && (next == 0x064A || next == 0x0649)) return true;
+      // Kasra + Ya (Arabic Yeh U+064A, Alef Maqsura U+0649, or Farsi Yeh U+06CC) = madd
+      if (cp == 0x0650 && (next == 0x064A || next == 0x0649 || next == 0x06CC)) return true;
     }
     return false;
+  }
+
+  /// Finds the next base letter (non-diacritic) after position [i].
+  /// Skips over diacritics (U+064B-U+065F), tatweel (U+0640),
+  /// and superscript/subscript alef (U+0670, U+0656).
+  static int? _findNextBaseLetter(List<int> runes, int i) {
+    for (int j = i + 1; j < runes.length; j++) {
+      final r = runes[j];
+      // Skip Arabic diacritics range
+      if (r >= 0x064B && r <= 0x065F) continue;
+      // Skip tatweel
+      if (r == 0x0640) continue;
+      // Skip superscript/subscript alef
+      if (r == 0x0670 || r == 0x0656) continue;
+      return r; // This is a base letter
+    }
+    return null;
   }
 
   /// Builds Arabic text with madd-specific diacritics using Unicode substitution:
@@ -2641,18 +2659,23 @@ class _TableRow extends StatelessWidget {
       );
     }
 
-    // For all other text: apply Unicode substitution for tikka fatha/kasra
+    // For all other text: apply per-character Unicode substitution.
+    // Only harakats that are followed by a mad letter get tikka style.
+    // Non-mad harakats remain unchanged.
     final runes = text.runes.toList();
     final buffer = StringBuffer();
     for (int i = 0; i < runes.length; i++) {
       final cp = runes[i];
-      if (cp == 0x064E) {
-        // Fatha → Superscript Alef (tikka) for non-alif letters
+      final nextBase = _findNextBaseLetter(runes, i);
+
+      if (cp == 0x064E && nextBase == 0x0627) {
+        // Fatha before Alif = madli → Superscript Alef (tikka fatha)
         buffer.write('\u0670');
-      } else if (cp == 0x0650) {
-        // Kasra → Subscript Alef (tikka)
+      } else if (cp == 0x0650 && (nextBase == 0x064A || nextBase == 0x0649 || nextBase == 0x06CC)) {
+        // Kasra before Ya (Arabic/Farsi/Maqsura) = madli → Subscript Alef (tikka kasra)
         buffer.write('\u0656');
       } else {
+        // Non-mad harakat or any other character → unchanged
         buffer.write(String.fromCharCode(cp));
       }
     }
