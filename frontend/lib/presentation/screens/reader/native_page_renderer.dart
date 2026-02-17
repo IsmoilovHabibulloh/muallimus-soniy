@@ -743,7 +743,7 @@ class _BismillahUnitState extends State<_BismillahUnit>
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
                 gradient: LinearGradient(
@@ -783,7 +783,7 @@ class _BismillahUnitState extends State<_BismillahUnit>
               child: Builder(
                 builder: (context) {
                   final sw = MediaQuery.of(context).size.width;
-                  final fontSize = sw < 400 ? 26.0 : 40.0;
+                  final fontSize = sw < 400 ? 20.0 : 24.0;
                   return Text(
                     widget.unit.textContent,
                     textDirection: TextDirection.rtl,
@@ -791,7 +791,7 @@ class _BismillahUnitState extends State<_BismillahUnit>
                     style: TextStyle(
                       fontFamily: 'ScheherazadeNew',
                       fontSize: fontSize,
-                      height: 2.0,
+                      height: 1.6,
                       color: const Color(0xFF1B5E20),
                       fontWeight: FontWeight.w700,
                     ),
@@ -2846,13 +2846,13 @@ class _SurahTitle extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
         decoration: BoxDecoration(
           color: isActive
               ? const Color(0xFF1B5E20).withOpacity(0.08)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: const Color(0xFF2E7D32).withOpacity(0.4),
             width: 1.5,
@@ -2864,9 +2864,9 @@ class _SurahTitle extends StatelessWidget {
             Text('﴾',
                 style: TextStyle(
                     fontFamily: 'Amiri',
-                    fontSize: 24,
+                    fontSize: 20,
                     color: const Color(0xFF2E7D32).withOpacity(0.6))),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Flexible(
               child: Text(
                 unit.textContent,
@@ -2874,20 +2874,20 @@ class _SurahTitle extends StatelessWidget {
                 textDirection: TextDirection.rtl,
                 style: TextStyle(
                   fontFamily: 'Amiri',
-                  fontSize: 22,
+                  fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: isActive
                       ? const Color(0xFF1B5E20)
                       : const Color(0xFF2E7D32),
-                  height: 1.4,
+                  height: 1.3,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Text('﴿',
                 style: TextStyle(
                     fontFamily: 'Amiri',
-                    fontSize: 24,
+                    fontSize: 20,
                     color: const Color(0xFF2E7D32).withOpacity(0.6))),
           ],
         ),
@@ -2897,7 +2897,7 @@ class _SurahTitle extends StatelessWidget {
 }
 
 // ============================================================
-// AYAT SECTION — Flowing Quranic verse text, large Amiri font
+// AYAT SECTION — Flowing Quranic verse text (continuous like original book)
 // ============================================================
 
 class _AyatSection extends StatelessWidget {
@@ -2913,43 +2913,57 @@ class _AyatSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: units.map((unit) {
-          final isActive = unit.id == activeUnitId;
-          return GestureDetector(
-            onTap: () => onUnitTap(unit),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOut,
-              margin: const EdgeInsets.symmetric(vertical: 2),
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-              decoration: BoxDecoration(
+    final sw = MediaQuery.of(context).size.width;
+    final fontSize = sw < 400 ? 18.0 : 21.0;
+
+    // Build flowing inline spans — all ayats in one continuous paragraph
+    final spans = <InlineSpan>[];
+    for (int i = 0; i < units.length; i++) {
+      final unit = units[i];
+      final isActive = unit.id == activeUnitId;
+
+      spans.add(WidgetSpan(
+        alignment: PlaceholderAlignment.baseline,
+        baseline: TextBaseline.alphabetic,
+        child: GestureDetector(
+          onTap: () => onUnitTap(unit),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? const Color(0xFF1B5E20).withOpacity(0.10)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              unit.textContent,
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                fontFamily: 'ScheherazadeNew',
+                fontSize: fontSize,
+                fontWeight: FontWeight.w500,
                 color: isActive
-                    ? const Color(0xFF1B5E20).withOpacity(0.06)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                unit.textContent,
-                textAlign: TextAlign.right,
-                textDirection: TextDirection.rtl,
-                style: TextStyle(
-                  fontFamily: 'Amiri',
-                  fontSize: 24,
-                  fontWeight: FontWeight.w500,
-                  color: isActive
-                      ? const Color(0xFF1B5E20)
-                      : Colors.black.withOpacity(0.88),
-                  height: 1.8,
-                  letterSpacing: 0.3,
-                ),
+                    ? const Color(0xFF1B5E20)
+                    : Colors.black.withOpacity(0.88),
+                height: 1.85,
               ),
             ),
-          );
-        }).toList(),
+          ),
+        ),
+      ));
+
+      // Add small space between ayats
+      if (i < units.length - 1) {
+        spans.add(const TextSpan(text: '  '));
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: Text.rich(
+        TextSpan(children: spans),
+        textAlign: TextAlign.right,
+        textDirection: TextDirection.rtl,
       ),
     );
   }
