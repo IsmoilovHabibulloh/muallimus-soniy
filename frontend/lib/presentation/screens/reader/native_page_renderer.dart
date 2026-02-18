@@ -340,7 +340,7 @@ class _NativePageRendererState extends State<NativePageRenderer> {
 
       case 'title':
         return _TitleUnit(
-          unit: units.first,
+          units: units,
           isActive: activeUnitId == units.first.id,
           onTap: () => onUnitTap(units.first),
         );
@@ -812,12 +812,12 @@ class _BismillahUnitState extends State<_BismillahUnit>
 // ============================================================
 
 class _TitleUnit extends StatefulWidget {
-  final TextUnit unit;
+  final List<TextUnit> units;
   final bool isActive;
   final VoidCallback onTap;
 
   const _TitleUnit({
-    required this.unit,
+    required this.units,
     required this.isActive,
     required this.onTap,
   });
@@ -948,9 +948,9 @@ class _TitleUnitState extends State<_TitleUnit>
                 ],
               ),
               const SizedBox(height: 8),
-              // Title text
+              // Title text — combine all units (e.g. 3 letter forms)
               Text(
-                widget.unit.textContent,
+                widget.units.map((u) => u.textContent).join('    '),
                 textDirection: TextDirection.rtl,
                 textAlign: TextAlign.center,
                 style: TextStyle(
