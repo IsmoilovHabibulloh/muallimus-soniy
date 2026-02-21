@@ -97,7 +97,9 @@ async def list_audio_files(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(AudioFile).order_by(AudioFile.created_at.desc())
+        select(AudioFile)
+        .options(selectinload(AudioFile.segments))
+        .order_by(AudioFile.created_at.desc())
     )
     files = result.scalars().all()
     out = []

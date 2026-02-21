@@ -11,7 +11,16 @@ description: Serverga deploy qilish (ikkinchimuallim.codingtech.uz)
 | User | `root` |
 | Password | `codingtech2204` |
 | Domen | `ikkinchimuallim.codingtech.uz` |
-| Server yo'li | `/var/www/ikkinchimuallim` |
+| Server yo'li | `/root/muallimi-soniy` |
+| Web yo'li | `/var/www/ikkinchimuallim` |
+
+## Admin panel
+
+| Parametr | Qiymat |
+|----------|--------|
+| URL | `https://ikkinchimuallim.codingtech.uz/admin/` |
+| Login | `admin` |
+| Parol | `MuallimuS2026!Adm` |
 
 # Deploy jarayoni
 
