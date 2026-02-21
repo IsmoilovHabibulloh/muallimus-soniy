@@ -15,27 +15,36 @@ class WebAudioPlayer {
   /// Stop current audio and play new URL
   Future<void> playUrl(String url) async {
     // JavaScript orqali to'g'ridan-to'g'ri play qilish
-    // Bu Flutter web interop muammolarini chetlab o'tadi
-    js.context.callMethod('eval', ['''
+    final jsCode = '''
       (function() {
+        console.log("DART_AUDIO: playUrl called with:", "$url");
         // Avvalgisini to'xtatish
         if (window.__muallimi_audio) {
+          console.log("DART_AUDIO: stopping previous audio");
           window.__muallimi_audio.pause();
           window.__muallimi_audio.src = '';
           window.__muallimi_audio = null;
         }
         // Yangi audio yaratish
+        console.log("DART_AUDIO: creating new Audio for:", "$url");
         var a = new Audio("$url");
-        a.play().catch(function(e) { console.log("Audio play error:", e); });
+        a.play().then(function() {
+          console.log("DART_AUDIO: play started successfully");
+        }).catch(function(e) {
+          console.log("DART_AUDIO: play error:", e);
+        });
         a.onended = function() {
+          console.log("DART_AUDIO: audio ended");
           window.__muallimi_audio = null;
           if (window.__muallimi_onended) {
             window.__muallimi_onended();
           }
         };
         window.__muallimi_audio = a;
+        console.log("DART_AUDIO: setup complete");
       })();
-    ''']);
+    ''';
+    js.context.callMethod('eval', [jsCode]);
 
     // Dart callback'ni JS ga ulash
     js.context['__muallimi_onended'] = js.allowInterop(() {

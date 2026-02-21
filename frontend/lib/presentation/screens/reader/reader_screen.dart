@@ -300,6 +300,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   // ─── TAP on a specific unit ───
   Future<void> _tapUnit(TextUnit unit) async {
+    debugPrint('TAP_UNIT called: id=${unit.id} text="${unit.textContent}" url=${unit.audioSegmentUrl}');
     _webAudio.stop(); // Avvalgisini to'xtatish
 
     setState(() {
@@ -310,11 +311,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     });
 
     if (unit.audioSegmentUrl != null && unit.audioSegmentUrl!.isNotEmpty) {
+      debugPrint('TAP_UNIT playing: ${unit.audioSegmentUrl}');
       try {
         await _webAudio.playUrl(unit.audioSegmentUrl!);
       } catch (e) {
         debugPrint('Audio error: $e');
       }
+    } else {
+      debugPrint('TAP_UNIT: no audio URL for unit ${unit.id}');
     }
   }
 
