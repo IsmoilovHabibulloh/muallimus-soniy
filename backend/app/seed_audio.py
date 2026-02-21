@@ -31,11 +31,11 @@ logger = logging.getLogger("muallimi")
 # Advisory lock ID (boshqa seed worker bilan to'qnashmaslik uchun)
 AUDIO_SEED_LOCK_ID = 987654321
 
-# Materiallar papkasining nisbiy yo'li (backend/ ichidan)
-# Docker'da bu boshqacha bo'lishi mumkin, shuning uchun muhit o'zgaruvchisi ham qo'llab-quvvatlanadi
+# Materiallar papkasining yo'li
+# Docker ichida /app/Materiallar ga mount qilinadi
 MATERIALLAR_DIR = os.environ.get(
     "MATERIALLAR_DIR",
-    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "Materiallar")
+    "/app/Materiallar"
 )
 
 # Media papkasi (docker)

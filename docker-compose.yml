@@ -46,6 +46,7 @@ services:
     volumes:
       - media_data:/app/media
       - ./backend/app:/app/app:ro
+      - ./Materiallar:/app/Materiallar:ro
     depends_on:
       postgres:
         condition: service_healthy
