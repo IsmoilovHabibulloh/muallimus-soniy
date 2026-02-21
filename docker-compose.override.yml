@@ -12,6 +12,7 @@ services:
     volumes:
       - media_data:/app/media
       - ./backend/app:/app/app
+      - ./Materiallar:/app/Materiallar:ro
 
   worker:
     volumes:

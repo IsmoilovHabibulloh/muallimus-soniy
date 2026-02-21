@@ -50,6 +50,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Book seed error (non-fatal): {e}")
 
+    # Audio fayllarni seed qilish
+    try:
+        from app.seed_audio import seed_audio
+        await seed_audio()
+    except Exception as e:
+        logger.warning(f"Audio seed error (non-fatal): {e}")
+
     yield
 
     # Shutdown

@@ -89,6 +89,8 @@ class PageDetail {
   final String analysisStatus; // empty|pending|analyzing|draft|published|error
   final List<TextUnit> textUnits;
   final List<Section> sections;
+  final String? audioUrl;
+  final List<String> audioUrls;
 
   PageDetail({
     required this.id,
@@ -104,6 +106,8 @@ class PageDetail {
     this.analysisStatus = 'empty',
     required this.textUnits,
     this.sections = const [],
+    this.audioUrl,
+    this.audioUrls = const [],
   });
 
   /// True when page has an uploaded image and bbox-positioned units
@@ -129,6 +133,10 @@ class PageDetail {
         .toList() ?? [],
     sections: (json['sections'] as List?)
         ?.map((e) => Section.fromJson(e))
+        .toList() ?? [],
+    audioUrl: json['audio_url'],
+    audioUrls: (json['audio_urls'] as List?)
+        ?.map((e) => e as String)
         .toList() ?? [],
   );
 }

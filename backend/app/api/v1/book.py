@@ -11,7 +11,7 @@ from app.models.section import Section
 
 from app.database import get_db
 from app.models.book import Book, Chapter, Page, TextUnit
-from app.models.audio import UnitSegmentMapping, AudioSegment
+from app.models.audio import AudioFile, UnitSegmentMapping, AudioSegment
 from app.config import get_settings
 from app.schemas import BookOut, BookSummary, PageOut, TextUnitOut, ChapterOut
 from app.api.deps import get_published_book
@@ -89,6 +89,27 @@ async def get_page(
     if not page:
         raise HTTPException(status_code=404, detail="Sahifa topilmadi")
 
+    # Sahifaga tegishli audio fayllarni topish
+    audio_result = await db.execute(
+        select(AudioFile)
+        .where(
+            AudioFile.book_id == book.id,
+            AudioFile.page_start <= page_number,
+            AudioFile.page_end >= page_number,
+            AudioFile.status == "ready",
+        )
+        .order_by(AudioFile.id)
+    )
+    audio_files = audio_result.scalars().all()
+    # Sahifaga tegishli audio URL'larning ro'yxati
+    audio_urls = [
+        f"{settings.MEDIA_BASE_URL}/{af.file_path}"
+        for af in audio_files
+        if af.file_path
+    ]
+    # Birinchi audio URL (asosiy)
+    page_audio_url = audio_urls[0] if audio_urls else None
+
     # Build text units with audio URLs
     units = []
     for unit in sorted(page.text_units, key=lambda u: u.sort_order):
@@ -149,4 +170,6 @@ async def get_page(
         "is_annotated": page.is_annotated,
         "text_units": units,
         "sections": sections,
+        "audio_url": page_audio_url,
+        "audio_urls": audio_urls,
     }

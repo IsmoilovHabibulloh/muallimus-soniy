@@ -39,6 +39,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   int? _activeUnitId; // ID of the highlighted unit
   List<TextUnit> _currentPageUnits = []; // Units on the current page
   List<TextUnit> _playSectionUnits = []; // Section-scoped playback (empty = play all)
+  List<String> _currentPageAudioUrls = []; // Sahifa-darajasidagi audio URL'lar
+  int _currentAudioIndex = 0; // Qaysi audio ijro etilmoqda
+  bool _isPageAudioMode = false; // Sahifa audio rejimi (unit-by-unit emas)
   StreamSubscription? _playerStateSubscription;
   bool _isAutoAdvancing = false;
 
@@ -53,11 +56,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       prefs.setInt(AppConstants.keyLastReadPage, widget.initialPage);
     });
 
-    // Listen for audio completion to advance to next unit
+    // Listen for audio completion to advance to next unit/audio
     _playerStateSubscription = _audioPlayer.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed &&
           _playbackState == PlaybackState.playing) {
-        if (_playSectionUnits.isNotEmpty) {
+        if (_isPageAudioMode) {
+          // Sahifa audio rejimida — keyingi audio faylga o'tish
+          _advancePageAudio();
+        } else if (_playSectionUnits.isNotEmpty) {
           _advanceSectionUnit();
         } else {
           _advanceToNextUnit();
@@ -81,12 +87,57 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
-  // ─── PLAY: Start sequential playback ───
+  // ─── Called when page audio URLs are loaded ───
+  void _updatePageAudio(List<String> audioUrls) {
+    if (!mounted) return;
+    _currentPageAudioUrls = audioUrls;
+  }
+
+  // ─── PLAY: Start page-level audio playback ───
   Future<void> _startPlaying() async {
-    if (_currentPageUnits.isEmpty) return;
-    _playSectionUnits = []; // Clear section scope = play all
-    setState(() => _playbackState = PlaybackState.playing);
-    await _playCurrentUnit();
+    if (_currentPageAudioUrls.isNotEmpty) {
+      // Sahifa-darajasidagi audio mavjud — ularni ijro etish
+      _isPageAudioMode = true;
+      _currentAudioIndex = 0;
+      setState(() => _playbackState = PlaybackState.playing);
+      await _playCurrentPageAudio();
+    } else if (_currentPageUnits.isNotEmpty) {
+      // Fallback: unit-by-unit playback
+      _isPageAudioMode = false;
+      _playSectionUnits = [];
+      setState(() => _playbackState = PlaybackState.playing);
+      await _playCurrentUnit();
+    }
+  }
+
+  // ─── Play current page audio file ───
+  Future<void> _playCurrentPageAudio() async {
+    if (_currentAudioIndex >= _currentPageAudioUrls.length) {
+      // Barcha audio'lar tugadi
+      setState(() {
+        _playbackState = PlaybackState.idle;
+        _activeUnitId = null;
+        _isPageAudioMode = false;
+        _currentAudioIndex = 0;
+      });
+      return;
+    }
+
+    final url = _currentPageAudioUrls[_currentAudioIndex];
+    try {
+      await _audioPlayer.setUrl(url);
+      await _audioPlayer.play();
+    } catch (e) {
+      debugPrint('Page audio error: $e');
+      _advancePageAudio();
+    }
+  }
+
+  // ─── Advance to next page audio ───
+  void _advancePageAudio() {
+    if (_playbackState != PlaybackState.playing) return;
+    _currentAudioIndex++;
+    _playCurrentPageAudio();
   }
 
   // ─── PLAY SECTION: Play only units in a specific section ───
@@ -232,6 +283,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     if (_audioPlayer.processingState == ProcessingState.ready ||
         _audioPlayer.processingState == ProcessingState.buffering) {
       await _audioPlayer.play();
+    } else if (_isPageAudioMode) {
+      // Sahifa audio rejimida — hozirgi audio'dan davom etish
+      await _playCurrentPageAudio();
     } else {
       // Otherwise play current unit from start
       await _playCurrentUnit();
@@ -245,6 +299,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       _playbackState = PlaybackState.idle;
       _activeUnitId = null;
       _currentUnitIndex = 0;
+      _currentAudioIndex = 0;
+      _isPageAudioMode = false;
       _playSectionUnits = [];
     });
   }
@@ -329,6 +385,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                     _updatePageUnits(units);
                   }
                 },
+                onAudioUrlsLoaded: (audioUrls) {
+                  if (pageNumber == _currentPage) {
+                    _updatePageAudio(audioUrls);
+                  }
+                },
                 onSectionPlay: _playSectionByIds,
               );
             },
@@ -392,6 +453,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
               totalUnits: _currentPageUnits.length,
               currentPage: _currentPage,
               totalPages: totalPages,
+              isPageAudioMode: _isPageAudioMode,
+              currentAudioIndex: _currentAudioIndex,
+              totalAudioTracks: _currentPageAudioUrls.length,
               onPlay: () {
                 if (_playbackState == PlaybackState.paused) {
                   _resume();
@@ -423,6 +487,9 @@ class _AudioBar extends StatelessWidget {
   final int totalUnits;
   final int currentPage;
   final int totalPages;
+  final bool isPageAudioMode;
+  final int currentAudioIndex;
+  final int totalAudioTracks;
   final VoidCallback onPlay;
   final VoidCallback onPause;
   final VoidCallback onStop;
@@ -434,6 +501,9 @@ class _AudioBar extends StatelessWidget {
     required this.totalUnits,
     required this.currentPage,
     required this.totalPages,
+    this.isPageAudioMode = false,
+    this.currentAudioIndex = 0,
+    this.totalAudioTracks = 0,
     required this.onPlay,
     required this.onPause,
     required this.onStop,
@@ -469,8 +539,8 @@ class _AudioBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Unit progress (only when active) ──
-          if (isActive && totalUnits > 0)
+          // ── Track/Unit progress (only when active) ──
+          if (isActive)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Column(
@@ -479,9 +549,11 @@ class _AudioBar extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                      value: totalUnits > 0
-                          ? (currentUnitIndex + 1) / totalUnits
-                          : 0,
+                      value: isPageAudioMode && totalAudioTracks > 0
+                          ? (currentAudioIndex + 1) / totalAudioTracks
+                          : totalUnits > 0
+                              ? (currentUnitIndex + 1) / totalUnits
+                              : 0,
                       backgroundColor: AppColors.primary.withValues(alpha: 0.12),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         AppColors.primary.withValues(alpha: 0.7),
@@ -491,7 +563,9 @@ class _AudioBar extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${currentUnitIndex + 1} / $totalUnits',
+                    isPageAudioMode
+                        ? '🔊 ${currentAudioIndex + 1} / $totalAudioTracks'
+                        : '${currentUnitIndex + 1} / $totalUnits',
                     style: TextStyle(
                       fontSize: 11,
                       color: AppColors.primary.withValues(alpha: 0.6),
@@ -678,6 +752,7 @@ class _PageView extends ConsumerWidget {
   final int? activeUnitId;
   final VoidCallback onBackgroundTap;
   final Function(List<TextUnit>) onUnitsLoaded;
+  final Function(List<String>) onAudioUrlsLoaded;
   final Function(List<int>)? onSectionPlay;
 
   const _PageView({
@@ -686,6 +761,7 @@ class _PageView extends ConsumerWidget {
     this.activeUnitId,
     required this.onBackgroundTap,
     required this.onUnitsLoaded,
+    required this.onAudioUrlsLoaded,
     this.onSectionPlay,
   });
 
@@ -709,6 +785,7 @@ class _PageView extends ConsumerWidget {
         // Notify parent about units for audio playback
         WidgetsBinding.instance.addPostFrameCallback((_) {
           onUnitsLoaded(page.textUnits);
+          onAudioUrlsLoaded(page.audioUrls);
         });
 
         // === ALWAYS USE NATIVE RENDERER when text_units exist or page 1 (cover) ===
