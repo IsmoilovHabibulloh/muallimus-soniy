@@ -346,7 +346,7 @@ function playAudioFile(url, name) {
     document.getElementById('audio-player-name').textContent = name || 'Audio';
     document.getElementById('audio-player-toggle').textContent = '⏸️';
     audioPlayerEl.src = url;
-    audioPlayerEl.play().catch(() => {});
+    audioPlayerEl.play().catch(() => { });
 }
 
 function playSegmentRange(url, startMs, endMs, name) {
@@ -357,7 +357,7 @@ function playSegmentRange(url, startMs, endMs, name) {
     document.getElementById('audio-player-toggle').textContent = '⏸️';
     audioPlayerEl.src = url;
     audioPlayerEl.currentTime = startMs / 1000;
-    audioPlayerEl.play().catch(() => {});
+    audioPlayerEl.play().catch(() => { });
 
     // Stop at endMs
     const checkEnd = () => {
@@ -516,9 +516,9 @@ async function loadSegmentsInline(audioFileId) {
             </div>
             <div class="segments-list-compact">
                 ${segments.map(s => {
-                    const dur = s.duration_ms > 0 ? formatTime(s.duration_ms) : '0:00';
-                    const canPlay = s.file_url || !s.is_silence;
-                    return `
+            const dur = s.duration_ms > 0 ? formatTime(s.duration_ms) : '0:00';
+            const canPlay = s.file_url || !s.is_silence;
+            return `
                     <div class="segment-chip ${s.is_silence ? 'silence' : 'content'}">
                         <span class="seg-idx">#${s.segment_index}</span>
                         <span class="seg-type">${s.is_silence ? '🔇' : '🔊'}</span>
@@ -527,7 +527,7 @@ async function loadSegmentsInline(audioFileId) {
                         ${s.label ? `<span class="seg-label">${escapeHtml(s.label)}</span>` : ''}
                         ${s.file_url ? `<button class="btn btn-sm" onclick="playAudioFile('${s.file_url}', 'Segment #${s.segment_index}')" title="Tinglash">▶️</button>` : ''}
                     </div>`;
-                }).join('')}
+        }).join('')}
             </div>
         `;
     } catch (err) {
@@ -576,8 +576,6 @@ async function syncCutSegments(id) {
     const progressArea = document.getElementById(`progress-${id}`);
     const progressFill = document.getElementById(`progress-fill-${id}`);
     const progressText = document.getElementById(`progress-text-${id}`);
-
-    if (!confirm('Segmentlarni alohida fayllarga kesishni boshlaysizmi?')) return;
 
     btn.disabled = true;
     btn.textContent = '⏳ Kesilmoqda...';
