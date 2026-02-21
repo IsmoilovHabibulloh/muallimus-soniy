@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel — Muallimi Soniy</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
 </head>
 
 <body>
@@ -197,17 +197,20 @@
                             </div>
                             <div class="audio-player-controls">
                                 <button class="btn btn-sm" id="audio-player-prev" title="Oldingi">⏮</button>
-                                <button class="btn btn-sm btn-primary audio-play-btn" id="audio-player-toggle">▶️</button>
+                                <button class="btn btn-sm btn-primary audio-play-btn"
+                                    id="audio-player-toggle">▶️</button>
                                 <button class="btn btn-sm" id="audio-player-next" title="Keyingi">⏭</button>
                             </div>
                             <div class="audio-player-progress">
                                 <span id="audio-player-current">0:00</span>
-                                <input type="range" id="audio-player-seek" min="0" max="100" value="0" class="audio-seek-bar">
+                                <input type="range" id="audio-player-seek" min="0" max="100" value="0"
+                                    class="audio-seek-bar">
                                 <span id="audio-player-duration">0:00</span>
                             </div>
                             <div class="audio-player-volume">
                                 <span>🔊</span>
-                                <input type="range" id="audio-player-volume" min="0" max="100" value="80" class="audio-volume-bar">
+                                <input type="range" id="audio-player-volume" min="0" max="100" value="80"
+                                    class="audio-volume-bar">
                             </div>
                             <button class="btn btn-sm audio-close-btn" id="audio-player-close" title="Yopish">✕</button>
                         </div>
@@ -379,7 +382,7 @@
     <input type="file" id="audio-input" accept=".mp3" class="hidden">
     <input type="file" id="page-image-input" accept="image/png,image/jpeg,image/webp" class="hidden">
 
-    <script src="app.js"></script>
+    <script src="app.js?v=2"></script>
 </body>
 
 </html>
