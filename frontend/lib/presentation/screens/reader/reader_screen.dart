@@ -318,13 +318,18 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   // ─── TAP on a specific unit ───
   Future<void> _tapUnit(TextUnit unit) async {
-    // If playing sequentially, pause first
-    if (_playbackState == PlaybackState.playing) {
-      _audioPlayer.stop();
-    }
+    // Avval playerdan to'liq tozalash
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.seek(Duration.zero);
+    } catch (_) {}
+
+    // Agar sequential play bo'lsa, to'xtatish
+    final wasPlaying = _playbackState == PlaybackState.playing;
 
     setState(() {
       _activeUnitId = unit.id;
+      _isPageAudioMode = false;
       // Update index to tapped unit so resume continues from here
       final idx = _currentPageUnits.indexWhere((u) => u.id == unit.id);
       if (idx >= 0) _currentUnitIndex = idx;
@@ -332,20 +337,26 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
     if (unit.audioSegmentUrl != null && unit.audioSegmentUrl!.isNotEmpty) {
       try {
-        await _audioPlayer.setUrl(unit.audioSegmentUrl!);
+        // Cache-bust qo'shish (web brauzerlarda keshlanishning oldini olish)
+        final url = unit.audioSegmentUrl!.contains('?')
+            ? '${unit.audioSegmentUrl!}&t=${DateTime.now().millisecondsSinceEpoch}'
+            : '${unit.audioSegmentUrl!}?t=${DateTime.now().millisecondsSinceEpoch}';
+        await _audioPlayer.setUrl(url);
         await _audioPlayer.play();
       } catch (e) {
         debugPrint('Audio error: $e');
       }
 
       // After single-unit play, clear highlight (unless was in sequential mode)
-      _audioPlayer.playerStateStream.first.then((state) {
-        if (state.processingState == ProcessingState.completed &&
-            _playbackState != PlaybackState.playing &&
-            mounted) {
-          setState(() => _activeUnitId = null);
-        }
-      });
+      if (!wasPlaying) {
+        _audioPlayer.playerStateStream.first.then((state) {
+          if (state.processingState == ProcessingState.completed &&
+              _playbackState != PlaybackState.playing &&
+              mounted) {
+            setState(() => _activeUnitId = null);
+          }
+        });
+      }
     }
   }
 
