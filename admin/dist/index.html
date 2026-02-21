@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="uz" dir="ltr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel — Muallimi Soniy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen active">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-header">
+                    <div class="logo-icon">📖</div>
+                    <h1>Muallimi Soniy</h1>
+                    <p class="subtitle">Admin Panel</p>
+                </div>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">Foydalanuvchi nomi</label>
+                        <input type="text" id="username" required autocomplete="username" placeholder="admin">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Parol</label>
+                        <input type="password" id="password" required autocomplete="current-password"
+                            placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full" id="login-btn">
+                        <span>Kirish</span>
+                    </button>
+                    <div id="login-error" class="error-msg hidden"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard-screen" class="screen">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <span class="logo-sm">📖</span>
+                <span class="sidebar-title">Muallimi Soniy</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item active" data-page="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </li>
+                <li class="nav-item" data-page="book">
+                    <span class="nav-icon">📚</span>
+                    <span>Kitob</span>
+                </li>
+                <li class="nav-item" data-page="pages">
+                    <span class="nav-icon">📄</span>
+                    <span>Sahifalar</span>
+                </li>
+                <li class="nav-item" onclick="window.open('page-editor.html','_blank')" style="cursor:pointer">
+                    <span class="nav-icon">📐</span>
+                    <span>Page Editor</span>
+                </li>
+                <li class="nav-item" data-page="audio">
+                    <span class="nav-icon">🎵</span>
+                    <span>Audio</span>
+                </li>
+                <li class="nav-item" data-page="waveform">
+                    <span class="nav-icon">🌊</span>
+                    <span>Waveform Editor</span>
+                </li>
+                <li class="nav-item" data-page="feedback">
+                    <span class="nav-icon">💬</span>
+                    <span>Fikr-mulohazalar</span>
+                </li>
+                <li class="nav-item" data-page="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Sozlamalar</span>
+                </li>
+                <li class="nav-item" data-page="audit">
+                    <span class="nav-icon">📋</span>
+                    <span>Audit Log</span>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <button class="btn btn-ghost btn-sm" id="logout-btn">🚪 Chiqish</button>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <header class="topbar">
+                <button class="sidebar-toggle" id="sidebar-toggle">☰</button>
+                <h2 id="page-title">Dashboard</h2>
+                <div class="topbar-actions">
+                    <span id="admin-username" class="badge">admin</span>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <!-- Dashboard Page -->
+                <div id="page-dashboard" class="page active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📄</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="stat-pages">—</span>
+                                <span class="stat-label">Sahifalar</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🔤</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="stat-units">—</span>
+                                <span class="stat-label">Text Units</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🎵</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="stat-segments">—</span>
+                                <span class="stat-label">Audio Segments</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📌</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="stat-version">—</span>
+                                <span class="stat-label">Manifest Version</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h3>Tezkor harakatlar</h3>
+                        </div>
+                        <div class="card-body actions-row">
+                            <button class="btn btn-primary" onclick="navigateTo('book')">📚 Kitob boshqarish</button>
+                            <button class="btn btn-accent" id="btn-import-pdf">📥 PDF Import</button>
+                            <button class="btn btn-secondary" onclick="navigateTo('audio')">🎵 Audio yuklash</button>
+                            <button class="btn btn-success" id="btn-publish">🚀 Nashr qilish</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Book Page -->
+                <div id="page-book" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Kitob ma'lumotlari</h3>
+                        </div>
+                        <div class="card-body" id="book-info">
+                            <p class="text-muted">Yuklanmoqda...</p>
+                        </div>
+                    </div>
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h3>Boblar (TOC)</h3>
+                            <button class="btn btn-sm btn-primary" id="btn-add-chapter">+ Yangi bob</button>
+                        </div>
+                        <div class="card-body" id="chapters-list">
+                            <p class="text-muted">Yuklanmoqda...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pages Page -->
+                <div id="page-pages" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Sahifalar</h3>
+                            <div style="display:flex;gap:8px;">
+                                <button class="btn btn-sm btn-primary"
+                                    onclick="document.getElementById('page-image-input').click()">📤 Rasm
+                                    yuklash</button>
+                                <button class="btn btn-sm btn-accent"
+                                    onclick="window.open('page-editor.html','_blank')">📐 Page Editor</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="pages-grid" class="pages-grid">
+                                <p class="text-muted">Yuklanmoqda...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audio Page -->
+                <div id="page-audio" class="page">
+                    <!-- Audio Player Bar -->
+                    <div class="audio-player-bar" id="audio-player-bar" style="display:none">
+                        <div class="audio-player-inner">
+                            <div class="audio-player-info">
+                                <span class="audio-player-icon">🎵</span>
+                                <span class="audio-player-name" id="audio-player-name">—</span>
+                            </div>
+                            <div class="audio-player-controls">
+                                <button class="btn btn-sm" id="audio-player-prev" title="Oldingi">⏮</button>
+                                <button class="btn btn-sm btn-primary audio-play-btn" id="audio-player-toggle">▶️</button>
+                                <button class="btn btn-sm" id="audio-player-next" title="Keyingi">⏭</button>
+                            </div>
+                            <div class="audio-player-progress">
+                                <span id="audio-player-current">0:00</span>
+                                <input type="range" id="audio-player-seek" min="0" max="100" value="0" class="audio-seek-bar">
+                                <span id="audio-player-duration">0:00</span>
+                            </div>
+                            <div class="audio-player-volume">
+                                <span>🔊</span>
+                                <input type="range" id="audio-player-volume" min="0" max="100" value="80" class="audio-volume-bar">
+                            </div>
+                            <button class="btn btn-sm audio-close-btn" id="audio-player-close" title="Yopish">✕</button>
+                        </div>
+                        <audio id="audio-element"></audio>
+                    </div>
+
+                    <!-- Upload + Overview -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>🎵 Audio boshqarish</h3>
+                            <div style="display:flex;gap:8px;">
+                                <button class="btn btn-sm btn-primary" id="btn-upload-audio">📤 Audio yuklash</button>
+                            </div>
+                        </div>
+                        <div class="card-body" id="audio-overview" style="padding:12px 20px;">
+                            <div class="audio-stats-row" id="audio-stats-row">
+                                <span class="text-muted">Yuklanmoqda...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audio Files List -->
+                    <div id="audio-files-container" class="mt-4">
+                        <p class="text-muted">Yuklanmoqda...</p>
+                    </div>
+                </div>
+
+                <!-- Waveform Editor Page -->
+                <div id="page-waveform" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Waveform Editor</h3>
+                            <div class="waveform-controls">
+                                <select id="waveform-audio-select" class="form-select">
+                                    <option value="">Audio tanlang...</option>
+                                </select>
+                                <div class="speed-control">
+                                    <label>Tezlik:</label>
+                                    <input type="range" id="playback-speed" min="0.5" max="2" step="0.1" value="1">
+                                    <span id="speed-label">1.0x</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="waveform-container">
+                                <canvas id="waveform-canvas" width="1200" height="200"></canvas>
+                                <div id="waveform-markers"></div>
+                            </div>
+                            <div class="waveform-toolbar">
+                                <button class="btn btn-sm" id="wf-play">▶️ Play</button>
+                                <button class="btn btn-sm" id="wf-pause">⏸️ Pause</button>
+                                <button class="btn btn-sm" id="wf-zoom-in">🔍+ Zoom In</button>
+                                <button class="btn btn-sm" id="wf-zoom-out">🔍- Zoom Out</button>
+                                <button class="btn btn-sm btn-primary" id="wf-add-marker">📍 Marker qo'shish</button>
+                                <button class="btn btn-sm btn-accent" id="wf-auto-detect">🤖 Auto-detect</button>
+                                <span class="waveform-time" id="wf-time">00:00.000</span>
+                            </div>
+                            <div class="segments-preview mt-4" id="segments-preview"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feedback Page -->
+                <div id="page-feedback" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Fikr-mulohazalar</h3>
+                            <div>
+                                <select id="feedback-filter" class="form-select form-select-sm">
+                                    <option value="">Hammasi</option>
+                                    <option value="taklif">Takliflar</option>
+                                    <option value="xatolik">Xatoliklar</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table" id="feedback-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Ism</th>
+                                            <th>Telefon</th>
+                                            <th>Turi</th>
+                                            <th>Tafsilotlar</th>
+                                            <th>Telegram</th>
+                                            <th>Sana</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="feedback-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Page -->
+                <div id="page-settings" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Telegram Sozlamalari</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="telegram-form">
+                                <div class="form-group">
+                                    <label>Bot Token</label>
+                                    <input type="password" id="tg-bot-token" class="form-input"
+                                        placeholder="123456:ABC-DEF...">
+                                </div>
+                                <div class="form-group">
+                                    <label>Chat ID'lar (vergul bilan)</label>
+                                    <input type="text" id="tg-chat-ids" class="form-input"
+                                        placeholder="-100123456789,-100987654321">
+                                </div>
+                                <div class="form-row">
+                                    <button type="submit" class="btn btn-primary">💾 Saqlash</button>
+                                    <button type="button" class="btn btn-secondary" id="btn-test-telegram">📤 Test
+                                        yuborish</button>
+                                </div>
+                            </form>
+                            <div id="telegram-result" class="mt-2 hidden"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Log Page -->
+                <div id="page-audit" class="page">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Audit Log</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table" id="audit-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Harakat</th>
+                                            <th>Turi</th>
+                                            <th>ID</th>
+                                            <th>Tafsilotlar</th>
+                                            <th>Sana</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="audit-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal" id="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Modal</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer" id="modal-footer"></div>
+        </div>
+    </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="pdf-input" accept=".pdf" class="hidden">
+    <input type="file" id="audio-input" accept=".mp3" class="hidden">
+    <input type="file" id="page-image-input" accept="image/png,image/jpeg,image/webp" class="hidden">
+
+    <script src="app.js"></script>
+</body>
+
+</html>
