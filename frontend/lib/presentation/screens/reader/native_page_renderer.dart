@@ -152,12 +152,14 @@ class _NativePageRendererState extends State<NativePageRenderer> {
         for (final entry in groups) {
           final sectionType = _getSectionType(entry.key, entry.value);
           // Insert ULTRA divider before title sections (new lesson)
+          // but NOT before kalima_title — those use compact inline separators
           if (sectionType == 'title' && sectionWidgets.isNotEmpty) {
             sectionWidgets.add(const _LessonDivider());
           }
+          final bottomPad = (sectionType == 'kalima_title' || sectionType == 'dua') ? 4.0 : 12.0;
           sectionWidgets.add(
             Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(bottom: bottomPad),
               child: _buildSection(sectionType, entry.key, entry.value),
             ),
           );
@@ -211,6 +213,7 @@ class _NativePageRendererState extends State<NativePageRenderer> {
         final isNewLesson = tripletStarts.contains(firstUnitFlatIdx);
         
         // Insert ULTRA divider before new lesson (harakat triplet or title or ya_header)
+        // but NOT before kalima_title — those use compact inline separators
         if ((isNewLesson || sectionType == 'title' || secKey.contains('ya_header')) && contentChildren.isNotEmpty) {
           contentChildren.add(const _LessonDivider());
         }
@@ -228,9 +231,10 @@ class _NativePageRendererState extends State<NativePageRenderer> {
           sectionWidget = _buildSection(sectionType, secKey, units);
         }
         
+        final bottomPad = (sectionType == 'kalima_title' || sectionType == 'dua') ? 4.0 : 12.0;
         contentChildren.add(
           Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: EdgeInsets.only(bottom: bottomPad),
             child: sectionWidget,
           ),
         );
@@ -277,6 +281,12 @@ class _NativePageRendererState extends State<NativePageRenderer> {
   String _getSectionType(String sectionKey, List<TextUnit> units) {
     // Determine section type from key or unit metadata
     if (sectionKey.startsWith('bismillah')) return 'bismillah';
+    // Kalima/iman page titles (e.g. title_kalimat_iman, title_iman) — compact inline, not heavy card
+    if (sectionKey == 'title_kalimat_iman' || sectionKey == 'title_iman') return 'kalima_title';
+    // Kalima/iman sub-titles (e.g. kalima_tayyiba_title, iman_mujmal_title)
+    if ((sectionKey.startsWith('kalima_') || sectionKey.startsWith('iman_')) && sectionKey.endsWith('_title')) return 'kalima_title';
+    // Kalima/iman text (e.g. kalima_tayyiba, iman_mujmal, mashiatullah, istiaza, iman_tarif)
+    if (sectionKey.startsWith('kalima_') || sectionKey.startsWith('iman_') || sectionKey == 'mashiatullah' || sectionKey == 'istiaza' || sectionKey == 'iman_tarif') return 'dua';
     if (sectionKey.startsWith('title')) return 'title';
     if (sectionKey.startsWith('alphabet')) return 'alphabet';
     if (sectionKey.startsWith('harakat')) return 'harakat';
@@ -290,8 +300,10 @@ class _NativePageRendererState extends State<NativePageRenderer> {
       if (firstSection == 'madd_intro') return 'madd_intro';
       // Surah titles (e.g. surah_fatiha_title) — must check before generic 'title'
       if (firstSection.startsWith('surah_') && firstSection.endsWith('_title')) return 'surah_title';
-      // Kalima/Iman titles
-      if ((firstSection.startsWith('kalima_') || firstSection.startsWith('iman_')) && firstSection.endsWith('_title')) return 'title';
+      // Kalima/Iman titles — use compact inline style (not heavy _TitleUnit card)
+      if ((firstSection.startsWith('kalima_') || firstSection.startsWith('iman_')) && firstSection.endsWith('_title')) return 'kalima_title';
+      // Main page titles for kalima pages (e.g. title_kalimat_iman, title_iman)
+      if (firstSection == 'title_kalimat_iman' || firstSection == 'title_iman') return 'kalima_title';
       // Notes
       if (firstSection.contains('_note')) return 'note';
       // Ayat sections (Quranic verses)
@@ -343,6 +355,13 @@ class _NativePageRendererState extends State<NativePageRenderer> {
           units: units,
           isActive: activeUnitId == units.first.id,
           onTap: () => onUnitTap(units.first),
+        );
+
+      case 'kalima_title':
+        return _KalimaTitleUnit(
+          units: units,
+          activeUnitId: activeUnitId,
+          onUnitTap: onUnitTap,
         );
 
       case 'surah_title':
@@ -857,7 +876,7 @@ class _TitleUnitState extends State<_TitleUnit>
   @override
   Widget build(BuildContext context) {
     final sw = MediaQuery.of(context).size.width;
-    final fontSize = sw < 400 ? 34.0 : 44.0;
+    final fontSize = sw < 400 ? 22.0 : 26.0;
 
     return AnimatedBuilder(
       animation: _entryController,
@@ -874,134 +893,67 @@ class _TitleUnitState extends State<_TitleUnit>
         onTap: widget.onTap,
         child: Container(
           width: double.infinity,
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: widget.isActive
-                  ? [
-                      AppColors.primary.withOpacity(0.18),
-                      AppColors.primary.withOpacity(0.08),
-                    ]
-                  : [
-                      AppColors.primary.withOpacity(0.10),
-                      AppColors.primary.withOpacity(0.04),
-                    ],
-            ),
-            border: Border.all(
-              color: widget.isActive
-                  ? AppColors.primary.withOpacity(0.35)
-                  : AppColors.primary.withOpacity(0.15),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(widget.isActive ? 0.15 : 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+            border: Border(
+              bottom: BorderSide(
+                color: widget.isActive
+                    ? AppColors.primary.withOpacity(0.4)
+                    : AppColors.primary.withOpacity(0.18),
+                width: 2.0,
               ),
-            ],
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Small decorative top ornament
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 1,
-                      margin: const EdgeInsets.only(right: 12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.transparent,
-                            AppColors.primary.withOpacity(0.25),
-                          ],
-                        ),
-                      ),
+              // Left accent line
+              Expanded(
+                child: Container(
+                  height: 0.8,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        AppColors.primary.withOpacity(0.15),
+                      ],
                     ),
                   ),
-                  Icon(
-                    Icons.diamond_outlined,
-                    size: 14,
-                    color: AppColors.primary.withOpacity(0.4),
-                  ),
-                  Expanded(
-                    child: Container(
-                      height: 1,
-                      margin: const EdgeInsets.only(left: 12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.primary.withOpacity(0.25),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // Title text — combine all units (e.g. 3 letter forms)
-              Text(
-                widget.units.map((u) => u.textContent).join('    '),
-                textDirection: TextDirection.rtl,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'ScheherazadeNew',
-                  fontSize: fontSize,
-                  height: 1.8,
-                  color: widget.isActive
-                      ? AppColors.primary
-                      : const Color(0xFF1B5E20),
-                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 8),
-              // Bottom ornament
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 1,
-                      margin: const EdgeInsets.only(right: 12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.transparent,
-                            AppColors.primary.withOpacity(0.25),
-                          ],
-                        ),
-                      ),
+              // Title text — combine all units (e.g. 3 letter forms)
+              Flexible(
+                child: Text(
+                  widget.units.map((u) => u.textContent).join('    '),
+                  textDirection: TextDirection.rtl,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'ScheherazadeNew',
+                    fontSize: fontSize,
+                    height: 1.5,
+                    color: widget.isActive
+                        ? AppColors.primary
+                        : const Color(0xFF1B5E20),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              // Right accent line
+              Expanded(
+                child: Container(
+                  height: 0.8,
+                  margin: const EdgeInsets.only(left: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary.withOpacity(0.15),
+                        Colors.transparent,
+                      ],
                     ),
                   ),
-                  Icon(
-                    Icons.diamond_outlined,
-                    size: 14,
-                    color: AppColors.primary.withOpacity(0.4),
-                  ),
-                  Expanded(
-                    child: Container(
-                      height: 1,
-                      margin: const EdgeInsets.only(left: 12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.primary.withOpacity(0.25),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
@@ -2984,7 +2936,64 @@ class _AyatSectionState extends State<_AyatSection> {
 }
 
 // ============================================================
-// DUA SECTION — Centered dua/kalima text with premium styling
+// KALIMA TITLE UNIT — Simple centered title matching original book
+// Original style: centered bold text with ❁ ornaments, no cards
+// ============================================================
+
+class _KalimaTitleUnit extends StatelessWidget {
+  final List<TextUnit> units;
+  final int? activeUnitId;
+  final void Function(TextUnit) onUnitTap;
+
+  const _KalimaTitleUnit({
+    required this.units,
+    required this.activeUnitId,
+    required this.onUnitTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: Column(
+        children: units.map((unit) {
+          final isActive = unit.id == activeUnitId;
+          return GestureDetector(
+            onTap: () => onUnitTap(unit),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? const Color(0xFF1B5E20).withOpacity(0.06)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '❁  ${unit.textContent}  ❁',
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+                style: TextStyle(
+                  fontFamily: 'ScheherazadeNew',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: isActive
+                      ? const Color(0xFF1B5E20)
+                      : Colors.black.withOpacity(0.9),
+                  height: 1.6,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// DUA SECTION — Ultra premium kalima/dua text matching original book
+// Features: ornamental ❁ markers, ScheherazadeNew font, compact layout
 // ============================================================
 
 class _DuaSection extends StatelessWidget {
@@ -3000,8 +3009,11 @@ class _DuaSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sw = MediaQuery.of(context).size.width;
+    final fontSize = sw < 400 ? 21.0 : 24.0;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: units.map((unit) {
@@ -3011,27 +3023,53 @@ class _DuaSection extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeOut,
-              margin: const EdgeInsets.symmetric(vertical: 2),
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+              margin: const EdgeInsets.symmetric(vertical: 1),
+              padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 6),
               decoration: BoxDecoration(
                 color: isActive
-                    ? const Color(0xFF1B5E20).withOpacity(0.07)
+                    ? const Color(0xFF1B5E20).withOpacity(0.06)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(
-                unit.textContent,
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.rtl,
-                style: TextStyle(
-                  fontFamily: 'Amiri',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: isActive
-                      ? const Color(0xFF1B5E20)
-                      : Colors.black.withOpacity(0.85),
-                  height: 1.8,
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Leading ornamental marker ❁
+                  Text(
+                    '❁',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: const Color(0xFF5D4037).withOpacity(0.35),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Main Arabic text
+                  Flexible(
+                    child: Text(
+                      unit.textContent,
+                      textAlign: TextAlign.center,
+                      textDirection: TextDirection.rtl,
+                      style: TextStyle(
+                        fontFamily: 'ScheherazadeNew',
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w600,
+                        color: isActive
+                            ? const Color(0xFF1B5E20)
+                            : Colors.black.withOpacity(0.88),
+                        height: 1.7,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Trailing ornamental marker ❁
+                  Text(
+                    '❁',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: const Color(0xFF5D4037).withOpacity(0.35),
+                    ),
+                  ),
+                ],
               ),
             ),
           );
