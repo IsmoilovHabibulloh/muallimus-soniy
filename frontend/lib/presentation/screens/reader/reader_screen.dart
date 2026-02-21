@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'dart:html' as html;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:just_audio/just_audio.dart';
+import '../../../core/web_audio_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/constants.dart';
@@ -28,21 +28,20 @@ class ReaderScreen extends ConsumerStatefulWidget {
 
 class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   late PageController _pageController;
-  AudioPlayer? _audioPlayer;
+  final WebAudioPlayer _webAudio = WebAudioPlayer();
 
   int _currentPage = 1;
   bool _showOverlay = true;
 
   // Audio playback
   PlaybackState _playbackState = PlaybackState.idle;
-  int _currentUnitIndex = 0; // Which unit is currently playing/highlighted
-  int? _activeUnitId; // ID of the highlighted unit
-  List<TextUnit> _currentPageUnits = []; // Units on the current page
-  List<TextUnit> _playSectionUnits = []; // Section-scoped playback (empty = play all)
-  List<String> _currentPageAudioUrls = []; // Sahifa-darajasidagi audio URL'lar
-  int _currentAudioIndex = 0; // Qaysi audio ijro etilmoqda
-  bool _isPageAudioMode = false; // Sahifa audio rejimi (unit-by-unit emas)
-  StreamSubscription? _playerStateSubscription;
+  int _currentUnitIndex = 0;
+  int? _activeUnitId;
+  List<TextUnit> _currentPageUnits = [];
+  List<TextUnit> _playSectionUnits = [];
+  List<String> _currentPageAudioUrls = [];
+  int _currentAudioIndex = 0;
+  bool _isPageAudioMode = false;
   bool _isAutoAdvancing = false;
 
   @override
@@ -50,50 +49,29 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     super.initState();
     _currentPage = widget.initialPage;
     _pageController = PageController(initialPage: widget.initialPage - 1);
-    // Save initial page on URL navigation
     SharedPreferences.getInstance().then((prefs) {
       prefs.setInt(AppConstants.keyLastReadPage, widget.initialPage);
     });
+
+    // Audio tugaganda — keyingisiga o'tish
+    _webAudio.onCompleted = _onAudioCompleted;
   }
 
-  /// Yangi AudioPlayer yaratish — har safar yangi URL uchun
-  /// just_audio webda setUrl to'g'ri ishlamaydi, shuning uchun
-  /// har safar eski playerni dispose qilib, yangisini yaratamiz
-  Future<AudioPlayer> _createPlayer(String url) async {
-    // Eski playerni tozalash
-    _playerStateSubscription?.cancel();
-    try {
-      await _audioPlayer?.stop();
-      await _audioPlayer?.dispose();
-    } catch (_) {}
-
-    // Yangi player
-    final player = AudioPlayer();
-    _audioPlayer = player;
-
-    // Completion listener — keyingi segmentga o'tish uchun
-    _playerStateSubscription = player.playerStateStream.listen((state) {
-      if (state.processingState == ProcessingState.completed &&
-          _playbackState == PlaybackState.playing) {
-        if (_isPageAudioMode) {
-          _advancePageAudio();
-        } else if (_playSectionUnits.isNotEmpty) {
-          _advanceSectionUnit();
-        } else {
-          _advanceToNextUnit();
-        }
-      }
-    });
-
-    await player.setUrl(url);
-    return player;
+  void _onAudioCompleted() {
+    if (_playbackState != PlaybackState.playing) return;
+    if (_isPageAudioMode) {
+      _advancePageAudio();
+    } else if (_playSectionUnits.isNotEmpty) {
+      _advanceSectionUnit();
+    } else {
+      _advanceToNextUnit();
+    }
   }
 
   @override
   void dispose() {
-    _playerStateSubscription?.cancel();
     _pageController.dispose();
-    _audioPlayer?.dispose();
+    _webAudio.dispose();
     super.dispose();
   }
 
@@ -141,7 +119,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   // ─── Play current page audio file ───
   Future<void> _playCurrentPageAudio() async {
     if (_currentAudioIndex >= _currentPageAudioUrls.length) {
-      // Barcha audio'lar tugadi
       setState(() {
         _playbackState = PlaybackState.idle;
         _activeUnitId = null;
@@ -153,8 +130,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
     final url = _currentPageAudioUrls[_currentAudioIndex];
     try {
-      final player = await _createPlayer(url);
-      await player.play();
+      await _webAudio.playUrl(url);
     } catch (e) {
       debugPrint('Page audio error: $e');
       _advancePageAudio();
@@ -186,7 +162,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   // ─── Play the current section unit ───
   Future<void> _playSectionUnit() async {
     if (_currentUnitIndex >= _playSectionUnits.length) {
-      // Section done
       setState(() {
         _playbackState = PlaybackState.idle;
         _activeUnitId = null;
@@ -202,8 +177,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
     if (unit.audioSegmentUrl != null && unit.audioSegmentUrl!.isNotEmpty) {
       try {
-        final player = await _createPlayer(unit.audioSegmentUrl!);
-        await player.play();
+        await _webAudio.playUrl(unit.audioSegmentUrl!);
       } catch (e) {
         debugPrint('Section audio error: $e');
         _advanceSectionUnit();
@@ -226,7 +200,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   // ─── Play the current unit's audio ───
   Future<void> _playCurrentUnit() async {
     if (_currentUnitIndex >= _currentPageUnits.length) {
-      // All units done on this page → auto-advance
       _autoAdvanceToNextPage();
       return;
     }
@@ -237,16 +210,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
     if (unit.audioSegmentUrl != null && unit.audioSegmentUrl!.isNotEmpty) {
       try {
-        final player = await _createPlayer(unit.audioSegmentUrl!);
-        await player.play();
-        // Completion handled by _playerStateSubscription
+        await _webAudio.playUrl(unit.audioSegmentUrl!);
       } catch (e) {
         debugPrint('Audio error: $e');
-        // Skip to next unit on error
         _advanceToNextUnit();
       }
     } else {
-      // No audio for this unit — briefly highlight, then advance
       await Future.delayed(const Duration(milliseconds: 400));
       if (_playbackState == PlaybackState.playing) {
         _advanceToNextUnit();
@@ -299,7 +268,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   // ─── PAUSE ───
   void _pause() {
-    _audioPlayer?.pause();
+    _webAudio.pause();
     setState(() => _playbackState = PlaybackState.paused);
   }
 
@@ -307,27 +276,18 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   Future<void> _resume() async {
     setState(() => _playbackState = PlaybackState.playing);
 
-    final player = _audioPlayer;
-    // If the audio was paused mid-unit, resume it
-    if (player != null &&
-        (player.processingState == ProcessingState.ready ||
-         player.processingState == ProcessingState.buffering)) {
-      await player.play();
+    if (_webAudio.isPaused) {
+      _webAudio.resume();
     } else if (_isPageAudioMode) {
-      // Sahifa audio rejimida — hozirgi audio'dan davom etish
       await _playCurrentPageAudio();
     } else {
-      // Otherwise play current unit from start
       await _playCurrentUnit();
     }
   }
 
   // ─── STOP ───
   void _stop() {
-    _playerStateSubscription?.cancel();
-    _audioPlayer?.stop();
-    _audioPlayer?.dispose();
-    _audioPlayer = null;
+    _webAudio.stop();
     setState(() {
       _playbackState = PlaybackState.idle;
       _activeUnitId = null;
@@ -340,34 +300,20 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   // ─── TAP on a specific unit ───
   Future<void> _tapUnit(TextUnit unit) async {
-    final wasPlaying = _playbackState == PlaybackState.playing;
+    _webAudio.stop(); // Avvalgisini to'xtatish
 
     setState(() {
       _activeUnitId = unit.id;
       _isPageAudioMode = false;
-      // Update index to tapped unit so resume continues from here
       final idx = _currentPageUnits.indexWhere((u) => u.id == unit.id);
       if (idx >= 0) _currentUnitIndex = idx;
     });
 
     if (unit.audioSegmentUrl != null && unit.audioSegmentUrl!.isNotEmpty) {
       try {
-        // Yangi player yaratish (webda setUrl ishlamaydi)
-        final player = await _createPlayer(unit.audioSegmentUrl!);
-        await player.play();
+        await _webAudio.playUrl(unit.audioSegmentUrl!);
       } catch (e) {
         debugPrint('Audio error: $e');
-      }
-
-      // After single-unit play, clear highlight (unless was in sequential mode)
-      if (!wasPlaying) {
-        _audioPlayer?.playerStateStream.first.then((state) {
-          if (state.processingState == ProcessingState.completed &&
-              _playbackState != PlaybackState.playing &&
-              mounted) {
-            setState(() => _activeUnitId = null);
-          }
-        });
       }
     }
   }
