@@ -93,16 +93,27 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     _currentPageAudioUrls = audioUrls;
   }
 
-  // ─── PLAY: Start page-level audio playback ───
+  // ─── PLAY: Start audio playback ───
   Future<void> _startPlaying() async {
-    if (_currentPageAudioUrls.isNotEmpty) {
-      // Sahifa-darajasidagi audio mavjud — ularni ijro etish
+    // Agar unitlarda alohida audio segment bo'lsa, unit-by-unit play
+    final hasUnitAudio = _currentPageUnits.any(
+      (u) => u.audioSegmentUrl != null && u.audioSegmentUrl!.isNotEmpty,
+    );
+
+    if (hasUnitAudio && _currentPageUnits.isNotEmpty) {
+      // Unit-by-unit playback (har bir unit o'z segmentini play qiladi)
+      _isPageAudioMode = false;
+      _playSectionUnits = [];
+      setState(() => _playbackState = PlaybackState.playing);
+      await _playCurrentUnit();
+    } else if (_currentPageAudioUrls.isNotEmpty) {
+      // Fallback: sahifa-darajasidagi audio
       _isPageAudioMode = true;
       _currentAudioIndex = 0;
       setState(() => _playbackState = PlaybackState.playing);
       await _playCurrentPageAudio();
     } else if (_currentPageUnits.isNotEmpty) {
-      // Fallback: unit-by-unit playback
+      // Fallback: unit-by-unit (audio'siz highlight qilish)
       _isPageAudioMode = false;
       _playSectionUnits = [];
       setState(() => _playbackState = PlaybackState.playing);
