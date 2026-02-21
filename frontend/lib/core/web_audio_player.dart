@@ -1,83 +1,92 @@
-/// Web-specific audio player using dart:html AudioElement.
-/// just_audio webda setUrl to'g'ri ishlamaydi, shuning uchun
-/// to'g'ridan-to'g'ri HTML5 Audio API ishlatamiz.
+/// Web-specific audio player using JavaScript interop.
+/// dart:html AudioElement Flutter web compile'da to'g'ri ishlamasligi mumkin,
+/// shuning uchun to'g'ridan-to'g'ri JavaScript chaqiramiz.
 library;
 
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
-import 'dart:async';
+import 'dart:js' as js;
 import 'package:flutter/foundation.dart';
 
 class WebAudioPlayer {
-  html.AudioElement? _audio;
-  StreamSubscription? _endedSub;
-  StreamSubscription? _errorSub;
-
   /// Callback — audio tugaganda chaqiriladi
   VoidCallback? onCompleted;
 
-  /// Hozirgi URL
-  String? _currentUrl;
-
-  /// Yangi URL ni o'rnatib, ijro qilish
+  /// Stop current audio and play new URL
   Future<void> playUrl(String url) async {
-    // Eski audio'ni to'xtatish va tozalash
-    stop();
+    // JavaScript orqali to'g'ridan-to'g'ri play qilish
+    // Bu Flutter web interop muammolarini chetlab o'tadi
+    js.context.callMethod('eval', ['''
+      (function() {
+        // Avvalgisini to'xtatish
+        if (window.__muallimi_audio) {
+          window.__muallimi_audio.pause();
+          window.__muallimi_audio.src = '';
+          window.__muallimi_audio = null;
+        }
+        // Yangi audio yaratish
+        var a = new Audio("$url");
+        a.play().catch(function(e) { console.log("Audio play error:", e); });
+        a.onended = function() {
+          window.__muallimi_audio = null;
+          if (window.__muallimi_onended) {
+            window.__muallimi_onended();
+          }
+        };
+        window.__muallimi_audio = a;
+      })();
+    ''']);
 
-    _currentUrl = url;
-    _audio = html.AudioElement(url);
-    _audio!.preload = 'auto';
-
-    // Completion callback
-    _endedSub = _audio!.onEnded.listen((_) {
+    // Dart callback'ni JS ga ulash
+    js.context['__muallimi_onended'] = js.allowInterop(() {
       onCompleted?.call();
     });
-
-    _errorSub = _audio!.onError.listen((e) {
-      debugPrint('WebAudioPlayer error: $e');
-    });
-
-    try {
-      await _audio!.play();
-    } catch (e) {
-      debugPrint('WebAudioPlayer play error: $e');
-    }
   }
 
-  /// Pauzaga qo'yish
+  /// Pause
   void pause() {
-    _audio?.pause();
+    js.context.callMethod('eval', ['''
+      if (window.__muallimi_audio) window.__muallimi_audio.pause();
+    ''']);
   }
 
-  /// Davom ettirish (pauzadan)
+  /// Resume
   void resume() {
-    _audio?.play();
+    js.context.callMethod('eval', ['''
+      if (window.__muallimi_audio) window.__muallimi_audio.play();
+    ''']);
   }
 
-  /// To'xtatish va tozalash
+  /// Stop and clean up
   void stop() {
-    _endedSub?.cancel();
-    _errorSub?.cancel();
-    _endedSub = null;
-    _errorSub = null;
-
-    if (_audio != null) {
-      _audio!.pause();
-      _audio!.src = '';
-      _audio!.load(); // Resurslarni bo'shatish
-      _audio = null;
-    }
-    _currentUrl = null;
+    js.context.callMethod('eval', ['''
+      if (window.__muallimi_audio) {
+        window.__muallimi_audio.pause();
+        window.__muallimi_audio.src = '';
+        window.__muallimi_audio = null;
+      }
+    ''']);
   }
 
-  /// Ijro bo'lyaptimi?
-  bool get isPlaying => _audio != null && !_audio!.paused && !_audio!.ended;
+  /// Is playing?
+  bool get isPlaying {
+    final result = js.context.callMethod('eval', ['''
+      (window.__muallimi_audio && !window.__muallimi_audio.paused && !window.__muallimi_audio.ended) ? true : false
+    ''']);
+    return result == true;
+  }
 
-  /// Pauzadami?
-  bool get isPaused => _audio != null && _audio!.paused && !_audio!.ended;
+  /// Is paused?
+  bool get isPaused {
+    final result = js.context.callMethod('eval', ['''
+      (window.__muallimi_audio && window.__muallimi_audio.paused && !window.__muallimi_audio.ended) ? true : false
+    ''']);
+    return result == true;
+  }
 
   void dispose() {
     stop();
     onCompleted = null;
+    js.context['__muallimi_onended'] = null;
   }
 }
