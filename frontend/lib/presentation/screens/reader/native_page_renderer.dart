@@ -1427,10 +1427,33 @@ class _MuqaddimaPageState extends State<_MuqaddimaPage>
       return const Center(child: Text('Sahifa bo\'sh'));
     }
 
-    final headerUnit = widget.showHeader ? widget.units.first : null;
-    final bodyUnits = widget.showHeader && widget.units.length > 1
-        ? widget.units.sublist(1)
-        : widget.units;
+    // Separate Bismillah, header, and body units
+    TextUnit? bismillahUnit;
+    TextUnit? headerUnit;
+    List<TextUnit> bodyUnits;
+
+    // Find Bismillah unit (Arabic text containing بسم)
+    final bismillahIdx = widget.units.indexWhere(
+      (u) => u.textContent.contains('بسم') || u.textContent.contains('بِسْمِ'),
+    );
+    if (bismillahIdx >= 0) {
+      bismillahUnit = widget.units[bismillahIdx];
+    }
+
+    // Find MUQADDIMA header
+    final headerIdx = widget.units.indexWhere(
+      (u) => u.textContent.toUpperCase().contains('MUQADDIMA'),
+    );
+    if (widget.showHeader && headerIdx >= 0) {
+      headerUnit = widget.units[headerIdx];
+    }
+
+    // Body = everything except Bismillah and header
+    bodyUnits = widget.units.where((u) {
+      if (bismillahUnit != null && u.id == bismillahUnit!.id) return false;
+      if (headerUnit != null && u.id == headerUnit!.id) return false;
+      return true;
+    }).toList();
 
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 500;
@@ -1470,6 +1493,40 @@ class _MuqaddimaPageState extends State<_MuqaddimaPage>
                 ),
                 const SizedBox(height: 16),
 
+                // ── Bismillah (Arabic) ──
+                if (bismillahUnit != null) ...[
+                  Opacity(
+                    opacity: _headerFade.value,
+                    child: GestureDetector(
+                      onTap: () => widget.onUnitTap(bismillahUnit!),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: widget.activeUnitId == bismillahUnit!.id
+                              ? AppColors.primary.withOpacity(0.08)
+                              : Colors.transparent,
+                        ),
+                        child: Text(
+                          bismillahUnit!.textContent,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Amiri',
+                            fontSize: isMobile ? 22.0 : 28.0,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1B5E20),
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
                 // ── "MUQADDIMA" Header (only on page 2) ──
                 if (headerUnit != null) ...[
                   Transform.translate(
@@ -1477,7 +1534,7 @@ class _MuqaddimaPageState extends State<_MuqaddimaPage>
                     child: Opacity(
                       opacity: _headerFade.value,
                       child: GestureDetector(
-                        onTap: () => widget.onUnitTap(headerUnit),
+                        onTap: () => widget.onUnitTap(headerUnit!),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           padding: const EdgeInsets.symmetric(
@@ -1485,12 +1542,12 @@ class _MuqaddimaPageState extends State<_MuqaddimaPage>
                           ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
-                            color: widget.activeUnitId == headerUnit.id
+                            color: widget.activeUnitId == headerUnit!.id
                                 ? AppColors.primary.withOpacity(0.08)
                                 : Colors.transparent,
                           ),
                           child: Text(
-                            (AppLocalizations.of(context)?.foreword ?? headerUnit.textContent).toUpperCase(),
+                            (AppLocalizations.of(context)?.foreword ?? headerUnit!.textContent).toUpperCase(),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontFamily: 'Amiri',
